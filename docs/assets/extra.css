@@ -1,0 +1,44 @@
+/* Vusion brand — override Material theme accent with Vusion blue */
+:root {
+  --md-primary-fg-color: #1A237E;
+  --md-primary-fg-color--light: #3949AB;
+  --md-primary-fg-color--dark: #0D1642;
+  --md-accent-fg-color: #FFA000;
+}
+
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: #3949AB;
+  --md-primary-fg-color--light: #5C6BC0;
+  --md-primary-fg-color--dark: #1A237E;
+  --md-accent-fg-color: #FFB300;
+}
+
+/* Slightly wider content area for tables and diagrams */
+.md-grid {
+  max-width: 1100px;
+}
+
+/* Mermaid diagram styling — keep them readable */
+.mermaid {
+  text-align: center;
+  margin: 1.5em 0;
+}
+
+/* Clean table styling */
+.md-typeset table:not([class]) {
+  font-size: 0.82rem;
+}
+
+/* Tighter code block font */
+.md-typeset code {
+  font-size: 0.82em;
+}
+
+/* Navigation tab accent bar */
+.md-tabs {
+  border-bottom: 2px solid rgba(26, 35, 126, 0.1);
+}
+
+[data-md-color-scheme="slate"] .md-tabs {
+  border-bottom: 2px solid rgba(57, 73, 171, 0.15);
+}

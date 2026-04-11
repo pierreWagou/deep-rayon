@@ -1,0 +1,60 @@
+# https://mise.jdx.dev/configuration.html
+min_version = "2024.9.0"
+
+# ── Tool versions ──
+# `mise install` or auto-installed on `cd` into the project
+[tools]
+python = "3.12"
+uv = "latest"
+mprocs = "latest"
+
+# ── Environment ──
+[env]
+# Pin uv to use mise-managed Python (prevents uv from picking up its own 3.14)
+UV_PYTHON = "3.12"
+
+# ── Tasks ──
+
+[tasks.setup]
+description = "Bootstrap the project (dbt deps + pre-commit hooks)"
+run = """
+echo "Installing dbt project dependencies..."
+uv sync --project dbt_project --no-install-project --quiet
+
+echo "Installing pre-commit hooks..."
+uvx pre-commit install
+
+echo ""
+echo "Done! Run 'mise run dbt' to build all models."
+"""
+
+[tasks.check]
+description = "Run all linters, type checkers, and tests (full CI-equivalent check)"
+run = "uvx pre-commit run --all-files"
+
+[tasks.dbt]
+description = "Run dbt build (models + tests) against DuckDB"
+run = "cd dbt_project && uv run dbt build --profiles-dir ."
+
+[tasks."dbt:run"]
+description = "Run dbt models only"
+run = "cd dbt_project && uv run dbt run --profiles-dir ."
+
+[tasks."dbt:test"]
+description = "Run dbt tests only"
+run = "cd dbt_project && uv run dbt test --profiles-dir ."
+
+[tasks."dbt:docs"]
+description = "Generate and serve dbt documentation"
+run = """
+cd dbt_project && uv run dbt docs generate --profiles-dir .
+cd dbt_project && uv run dbt docs serve --profiles-dir . --port 8200
+"""
+
+[tasks.docs]
+description = "Serve MkDocs documentation site"
+run = "uvx --with mkdocs-material mkdocs serve --dev-addr 127.0.0.1:8100"
+
+[tasks.benchmark]
+description = "Run benchmark queries against DuckDB"
+run = "cd dbt_project && uv run pytest ../benchmarks/ -v"

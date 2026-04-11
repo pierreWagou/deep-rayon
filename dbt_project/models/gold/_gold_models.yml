@@ -1,0 +1,135 @@
+version: 2
+
+models:
+  - name: basket_analysis_per_store
+    description: >
+      Store-level basket analysis KPIs: average size, item count, variance.
+      Translated from PySpark gold_datamart_kpis.py.
+    meta:
+      owner: data-engineering
+      databricks:
+        optimize: true
+        z_order: [store_id, store_type]
+    columns:
+      - name: store_id
+        description: Unique store identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: avg_basket_size
+        description: Average total quantity per basket
+      - name: avg_basket_item_count
+        description: Average number of distinct products per basket
+      - name: stddev_basket_size
+        description: Standard deviation of basket size
+      - name: min_basket_size
+        description: Minimum basket size observed
+      - name: max_basket_size
+        description: Maximum basket size observed
+      - name: total_transactions
+        description: Total number of transactions at this store
+        data_tests:
+          - not_null
+      - name: avg_unique_items_per_basket
+        description: Average unique items per basket
+      - name: store_type
+        description: Normalized store type
+      - name: latitude
+        description: Store latitude
+      - name: longitude
+        description: Store longitude
+      - name: opening
+        description: Store opening hour
+      - name: closing
+        description: Store closing hour
+      - name: created_at
+        description: Record creation timestamp
+
+  - name: product_trend_per_store
+    description: >
+      Product sales trends per store with 30/60/90-day windows and trend indicators.
+      Translated from PySpark gold_datamart_kpis.py.
+      Bug fix: corrected store join condition (was store_id == product_id).
+    meta:
+      owner: data-engineering
+      databricks:
+        optimize: true
+        z_order: [store_id, product_id, trend_direction]
+    columns:
+      - name: store_id
+        description: Store identifier
+        data_tests:
+          - not_null
+      - name: product_id
+        description: Product identifier
+        data_tests:
+          - not_null
+      - name: sales_30d
+        description: Total quantity sold in last 30 days
+      - name: sales_60d
+        description: Total quantity sold in last 60 days
+      - name: sales_90d
+        description: Total quantity sold in last 90 days
+      - name: total_sales_all_time
+        description: Total quantity sold across all time
+      - name: transaction_count
+        description: Number of transactions for this store-product pair
+      - name: trend_direction
+        description: "Sales trend: Increasing, Decreasing, or Stable"
+        data_tests:
+          - accepted_values:
+              values: ['Increasing', 'Decreasing', 'Stable']
+      - name: trend_30d_vs_60d_pct
+        description: Percentage change between 30d and prior-30d sales
+      - name: sales_velocity_30d
+        description: Units sold per day in the last 30 days
+      - name: brand
+        description: Product brand name
+      - name: ean
+        description: Product EAN code
+      - name: store_type
+        description: Normalized store type
+      - name: created_at
+        description: Record creation timestamp
+
+  - name: nb_clients_per_store
+    description: >
+      Store-level client engagement metrics: unique clients, transaction volume, averages.
+      Translated from PySpark gold_datamart_kpis.py.
+    meta:
+      owner: data-engineering
+      databricks:
+        optimize: true
+        z_order: [store_id, store_type]
+    columns:
+      - name: store_id
+        description: Unique store identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: nb_clients
+        description: Number of distinct clients who shopped at this store
+        data_tests:
+          - not_null
+      - name: total_transactions
+        description: Total number of transactions at this store
+        data_tests:
+          - not_null
+      - name: total_quantity
+        description: Total quantity sold at this store
+      - name: avg_quantity
+        description: Average quantity per transaction
+      - name: avg_transactions_per_client
+        description: Average number of transactions per client
+      - name: store_type
+        description: Normalized store type
+      - name: latitude
+        description: Store latitude
+      - name: longitude
+        description: Store longitude
+      - name: opening
+        description: Store opening hour
+      - name: closing
+        description: Store closing hour
+      - name: created_at
+        description: Record creation timestamp

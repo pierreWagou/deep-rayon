@@ -1,0 +1,99 @@
+version: 2
+
+models:
+  - name: customer_silver
+    description: >
+      Customer analytics table with RFM (Recency, Frequency, Monetary) scoring,
+      segmentation, lifecycle status, and primary store preference.
+      Translated from PySpark silver_customer_layer.py.
+    meta:
+      owner: data-engineering
+      databricks:
+        optimize: true
+        z_order: [client_id, rfm_segment, customer_status]
+    columns:
+      - name: client_id
+        description: Unique client identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: client_name
+        description: Client full name
+      - name: client_job
+        description: Client occupation
+      - name: client_email
+        description: Client email address
+      - name: account_id
+        description: Fidelity card number
+      - name: recency_days
+        description: Days since last purchase
+        data_tests:
+          - not_null
+      - name: frequency
+        description: Total number of distinct transactions
+        data_tests:
+          - not_null
+      - name: monetary_value
+        description: Total quantity purchased across all transactions
+        data_tests:
+          - not_null
+      - name: recency_score
+        description: "RFM recency score (1-5): 5 = most recent"
+        data_tests:
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+      - name: frequency_score
+        description: "RFM frequency score (1-5): 5 = most frequent"
+        data_tests:
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+      - name: monetary_score
+        description: "RFM monetary score (1-5): 5 = highest value"
+        data_tests:
+          - accepted_values:
+              values: [1, 2, 3, 4, 5]
+      - name: rfm_segment
+        description: Customer segment derived from RFM scores
+        data_tests:
+          - accepted_values:
+              values:
+                - Champion
+                - Loyal Customer
+                - At Risk
+                - Lost
+                - Hibernating
+                - Need Attention
+                - About to Sleep
+                - Potential Loyalist
+      - name: customer_status
+        description: "Current status: Active (<=30d), Inactive (<=90d), Churned (>90d)"
+        data_tests:
+          - accepted_values:
+              values: ['Active', 'Inactive', 'Churned']
+      - name: customer_lifecycle_stage
+        description: "Lifecycle stage: New, Active, Lapsed, Churned"
+        data_tests:
+          - accepted_values:
+              values: ['New', 'Active', 'Lapsed', 'Churned']
+      - name: is_repeat_customer
+        description: Whether the customer has more than one transaction
+      - name: first_purchase_date
+        description: Date of the client's first purchase
+      - name: last_purchase_date
+        description: Date of the client's most recent purchase
+      - name: avg_quantity_per_transaction
+        description: Average quantity per transaction
+      - name: primary_store_id
+        description: Store ID where the client shops most frequently
+      - name: primary_store_type
+        description: Type of the client's primary store
+      - name: primary_store_transaction_count
+        description: Number of transactions at the primary store
+      - name: store_loyalty_score
+        description: Percentage of transactions at the primary store (0-100)
+      - name: total_transactions
+        description: Total number of transactions
+      - name: created_at
+        description: Timestamp when the record was created
+      - name: updated_at
+        description: Timestamp when the record was last updated

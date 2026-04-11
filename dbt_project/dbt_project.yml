@@ -1,0 +1,30 @@
+name: 'vusion'
+version: '1.0.0'
+profile: 'vusion'
+config-version: 2
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+analysis-paths: ["analyses"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+# ── Model configuration ──
+models:
+  vusion:
+    staging:
+      +materialized: view
+      +schema: staging
+    silver:
+      +materialized: table
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold
+
+# ── Vars for cross-adapter compatibility ──
+vars:
+  # Path to source CSV files (local dev)
+  data_path: "../data"

@@ -1,0 +1,138 @@
+version: 2
+
+models:
+  - name: stg_clients
+    description: >
+      Cleaned client/customer master data. 1:1 with source CSV.
+      Handles missing account_id, type casting, and null filtering.
+    columns:
+      - name: client_id
+        description: Unique client identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: name
+        description: Client full name
+      - name: job
+        description: Client occupation/job title
+      - name: email
+        description: Client email address
+      - name: account_id
+        description: Fidelity card number (nullable — may be missing in some file drops)
+
+  - name: stg_stores
+    description: >
+      Cleaned store master data with normalized types and parsed coordinates.
+      Handles missing lat/lng columns, store type casing normalization.
+    columns:
+      - name: store_id
+        description: Unique store identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: latlng
+        description: Raw GPS coordinates string
+      - name: opening
+        description: Store opening hour (HH:MM format)
+      - name: closing
+        description: Store closing hour (HH:MM format)
+      - name: store_type
+        description: >
+          Normalized store type (lowercase). Values: express, hyper, super, supermarket.
+        data_tests:
+          - accepted_values:
+              values: ['express', 'hyper', 'super', 'supermarket']
+              config:
+                severity: warn
+      - name: latitude
+        description: Latitude parsed from latlng or explicit column
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+      - name: longitude
+        description: Longitude parsed from latlng or explicit column
+        data_tests:
+          - not_null:
+              config:
+                severity: warn
+
+  - name: stg_products
+    description: >
+      Cleaned product catalog. Handles type casting and brand normalization.
+    columns:
+      - name: product_id
+        description: Unique product identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: ean
+        description: European Article Number (barcode)
+        data_tests:
+          - not_null
+      - name: brand
+        description: Product brand name (trimmed)
+        data_tests:
+          - not_null
+      - name: description
+        description: Product description text
+
+  - name: stg_transactions
+    description: >
+      Cleaned transaction records with normalized dates and sign-corrected
+      quantity/spend values. Handles date format variations and sign inconsistencies.
+    columns:
+      - name: transaction_id
+        description: Unique transaction identifier
+        data_tests:
+          - unique
+          - not_null
+      - name: client_id
+        description: Foreign key to stg_clients.client_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_clients')
+              field: client_id
+              config:
+                severity: warn
+      - name: transaction_date
+        description: Normalized transaction date (YYYY-MM-DD)
+        data_tests:
+          - not_null
+      - name: hour
+        description: Hour of the transaction (0-23)
+        data_tests:
+          - not_null
+      - name: minute
+        description: Minute of the transaction (0-59)
+        data_tests:
+          - not_null
+      - name: product_id
+        description: Foreign key to stg_products.product_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_products')
+              field: product_id
+              config:
+                severity: warn
+      - name: quantity
+        description: Quantity purchased (positive) or returned (negative), sign-corrected
+        data_tests:
+          - not_null
+      - name: spend
+        description: Total spend amount, sign-corrected to match quantity direction
+        data_tests:
+          - not_null
+      - name: store_id
+        description: Foreign key to stg_stores.store_id
+        data_tests:
+          - not_null
+          - relationships:
+              to: ref('stg_stores')
+              field: store_id
+              config:
+                severity: warn
+      - name: is_sign_corrected
+        description: Flag indicating if sign correction was applied to this transaction

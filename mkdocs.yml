@@ -1,0 +1,109 @@
+site_name: Vusion Data Platform
+site_description: Retail data platform — Senior Data Engineering take-home for Vusion
+site_url: https://pierreWagou.github.io/vusion/
+repo_url: https://github.com/pierreWagou/vusion
+repo_name: pierreWagou/vusion
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.svg
+  favicon: assets/favicon.svg
+  icon:
+    repo: fontawesome/brands/github
+  features:
+    - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.instant
+    - navigation.instant.progress
+    - content.code.copy
+    - content.code.annotate
+    - search.suggest
+    - search.highlight
+    - toc.follow
+  palette:
+    # Light mode — Vusion blue
+    - scheme: default
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    # Dark mode
+    - scheme: slate
+      primary: indigo
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+# Custom CSS for Vusion brand polish
+extra_css:
+  - assets/extra.css
+
+# Navigation — symlinked READMEs in docs/
+nav:
+  - Home: index.md
+  - dbt Project: dbt.md
+  - Orchestration:
+    - Airflow: airflow.md
+    - Databricks: databricks.md
+  - Benchmarks: benchmarks.md
+
+# Markdown extensions for rich content
+markdown_extensions:
+  # Tables, footnotes, attribute lists
+  - tables
+  - footnotes
+  - attr_list
+  - md_in_html
+  - def_list
+  # Admonitions (note, warning, tip boxes)
+  - admonition
+  - pymdownx.details
+  # Code highlighting + copy
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  # Fenced code blocks + Mermaid diagrams
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  # Content tabs, task lists, emoji
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  # Table of contents
+  - toc:
+      permalink: true
+      toc_depth: 3
+
+# Plugins
+plugins:
+  - search
+
+# Footer
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/pierreWagou/vusion
+      name: GitHub Repository
+  generator: false
+
+# Copyright
+copyright: "Vusion Data Platform &mdash; Senior Data Engineering Take-Home"

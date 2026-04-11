@@ -1,0 +1,116 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Raw CSV files simulating hourly Azure Blob Storage drops.
+      In production, these would be external tables reading from
+      Azure Blob Storage via ABFSS paths.
+    meta:
+      owner: data-engineering
+      production_location: "abfss://raw@vusiondata.dfs.core.windows.net/"
+    tables:
+      - name: clients
+        description: Client/customer master data with fidelity card information
+        meta:
+          file: "clients_500k.csv"
+        external:
+          location: "{{ var('data_path') }}/clients_500k.csv"
+          file_format: csv
+          options:
+            header: "true"
+        columns:
+          - name: id
+            description: Unique client identifier
+          - name: name
+            description: Client full name
+          - name: job
+            description: Client occupation/job title
+          - name: email
+            description: Client email address
+          - name: account_id
+            description: Fidelity card number (may be missing in some file drops)
+
+      - name: stores
+        description: Store master data with location and operating hours
+        meta:
+          file: "stores_500k.csv"
+        external:
+          location: "{{ var('data_path') }}/stores_500k.csv"
+          file_format: csv
+          options:
+            header: "true"
+        columns:
+          - name: id
+            description: Unique store identifier
+          - name: latlng
+            description: GPS coordinates as "latitude,longitude" string
+          - name: opening
+            description: Store opening hour (HH:MM format)
+          - name: closing
+            description: Store closing hour (HH:MM format)
+          - name: type
+            description: >
+              Store type category (e.g., express, hyper, super).
+              Known quality issue: inconsistent casing across file drops.
+          - name: latitude
+            description: Latitude extracted from latlng (may be missing)
+          - name: longitude
+            description: Longitude extracted from latlng (may be missing)
+
+      - name: products
+        description: Product catalog with brand and EAN codes
+        meta:
+          file: "products_500k.csv"
+        external:
+          location: "{{ var('data_path') }}/products_500k.csv"
+          file_format: csv
+          options:
+            header: "true"
+        columns:
+          - name: id
+            description: Unique product identifier
+          - name: ean
+            description: European Article Number (barcode)
+          - name: brand
+            description: >
+              Product brand name.
+              Known quality issue: inconsistent naming across file drops.
+          - name: description
+            description: Product description text
+
+      - name: transactions
+        description: Transaction records linking clients, products, and stores
+        meta:
+          file: "transactions_500k.csv"
+        external:
+          location: "{{ var('data_path') }}/transactions_500k.csv"
+          file_format: csv
+          options:
+            header: "true"
+        columns:
+          - name: transaction_id
+            description: Unique transaction identifier
+          - name: client_id
+            description: Foreign key to clients.id
+          - name: date
+            description: >
+              Transaction date.
+              Known quality issue: format varies across file drops
+              (YYYY-MM-DD, DD/MM/YYYY, MM-DD-YYYY).
+          - name: hour
+            description: Hour of the transaction (0-23)
+          - name: minute
+            description: Minute of the transaction (0-59)
+          - name: product_id
+            description: Foreign key to products.id
+          - name: quantity
+            description: >
+              Quantity purchased (positive) or returned (negative).
+              Known quality issue: sign may be inconsistent with spend.
+          - name: spend
+            description: >
+              Total spend amount for the transaction.
+              Known quality issue: sign may be inconsistent with quantity.
+          - name: store_id
+            description: Foreign key to stores.id

@@ -1,0 +1,28 @@
+repos:
+  # ── Python: formatting + linting ──
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.15.9
+    hooks:
+      - id: ruff-format
+      - id: ruff-check
+        args: [--fix]
+
+  # ── dbt: build + test ──
+  - repo: local
+    hooks:
+      - id: dbt-build
+        name: dbt build (DuckDB)
+        entry: bash -c 'cd dbt_project && uv run dbt build --profiles-dir .'
+        language: system
+        files: ^dbt_project/
+        pass_filenames: false
+
+  # ── Python: benchmarks test ──
+  - repo: local
+    hooks:
+      - id: pytest-benchmarks
+        name: pytest (benchmarks)
+        entry: bash -c 'cd dbt_project && uv run dbt build --profiles-dir . && cd .. && uv run --project dbt_project pytest benchmarks/ -q'
+        language: system
+        files: ^benchmarks/
+        pass_filenames: false
