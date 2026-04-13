@@ -1,10 +1,10 @@
-# ⚗️ Hyper-Rayon
+# 🛒 Hyper-Rayon
 
 > Turning messy retail data into reliable store intelligence
 
 [![CI](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml)
 [![CD](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
 [![dbt](https://img.shields.io/badge/dbt-1.11-FF694B.svg?logo=dbt)](https://docs.getdbt.com/)
 [![DuckDB](https://img.shields.io/badge/DuckDB-local%20dev-FEF000.svg?logo=duckdb)](https://duckdb.org/)
 [![Databricks](https://img.shields.io/badge/Databricks-production-FF3621.svg?logo=databricks)](https://www.databricks.com/)
@@ -109,13 +109,24 @@ mise run bundle:deploy
 databricks bundle run vusion_dbt_pipeline
 ```
 
-The `data_path` variable controls where dbt reads CSV files. It's set per target in `databricks.yml`:
+The `data_path` variable controls where dbt reads CSV files. It's set via `BUNDLE_VAR_data_path` in `.env` (see below).
 
-| Target | `data_path` | Description |
-|--------|-------------|-------------|
-| dev | `/FileStore/data` | DBFS — for testing on Databricks |
-| prod | `abfss://<container>@<account>.dfs.core.windows.net/data` | Azure Blob Storage — production |
-| local | `data` | Local `data/` directory (DuckDB) |
+## Environment Variables (`.env`)
+
+Local configuration is managed through a `.env` file (loaded by [mise](https://mise.jdx.dev/) automatically). Copy the template and fill in real values:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `BUNDLE_VAR_warehouse_id` | SQL warehouse ID for dbt tasks | `e8484d001a20e65b` |
+| `BUNDLE_VAR_data_path` | Path to source CSV files on Databricks | `/FileStore/data` |
+| `DATABRICKS_HOST` | Workspace URL (alternative to `~/.databrickscfg`) | `https://adb-123.azuredatabricks.net` |
+| `DATABRICKS_TOKEN` | PAT or service principal token | `dapi...` |
+
+Variables prefixed with `BUNDLE_VAR_` are automatically picked up by `databricks bundle deploy` and mapped to the bundle variables declared in `databricks.yml`. For production, CI/CD sets these via GitHub environment secrets.
 
 ## CI/CD
 

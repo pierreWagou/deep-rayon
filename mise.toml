@@ -46,7 +46,7 @@ run = "uv run dbt build --project-dir dbt_project --profiles-dir dbt_project"
 
 [tasks."dbt:run"]
 description = "Run dbt models only"
-run = "uv run dbt run --project-dir dbt_project --profiles-dir dbt_project"
+run = "uv run dbt seed --project-dir dbt_project --profiles-dir dbt_project && uv run dbt run --project-dir dbt_project --profiles-dir dbt_project"
 
 [tasks."dbt:test"]
 description = "Run dbt tests only"

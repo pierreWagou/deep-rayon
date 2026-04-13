@@ -1,6 +1,10 @@
 -- bronze/stores.sql
 -- Bronze layer: 1:1 with source stores CSV (no PySpark equivalent — new staging logic)
 -- Handles: missing lat/lng columns, store type normalization, type casting
+--
+-- Data type safety: explicit casts on all columns. Type mismatches in CSV drops
+-- (e.g., store_id as alphanumeric) produce NULL → filtered by where-clause.
+-- Schema tests (not_null, accepted_values) catch any data loss downstream.
 
 with source as (
     select * from {{ read_source('raw', 'stores', 'stores_500k.csv') }}

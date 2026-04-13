@@ -58,6 +58,7 @@ resources:
             project_directory: ../dbt_project
             commands:
               - "dbt deps"
+              - "dbt seed"
               - "dbt run --vars '{\"data_path\": \"${var.data_path}\"}'"
             warehouse_id: ${var.warehouse_id}
           libraries:

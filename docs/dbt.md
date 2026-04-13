@@ -117,15 +117,53 @@ Business logic layer. Materialized as **tables** for performance.
 - Customer status (Active/Inactive/Churned) and lifecycle stage (New/Active/Lapsed/Churned)
 - Primary store preference with loyalty score (% of transactions at top store)
 
+**Column groups and rationale:**
+
+| Group | Columns | Why |
+|-------|---------|-----|
+| Identity | `client_id`, `client_name`, `client_job`, `client_email`, `account_id` | Denormalized from bronze `clients` — makes the silver table self-contained for dashboards without re-joining |
+| RFM Metrics | `recency_days`, `frequency`, `monetary_value` | The three raw RFM dimensions computed from transactions — foundation for scoring |
+| RFM Scores | `recency_score`, `frequency_score`, `monetary_score` | 1-5 scoring using fixed thresholds — enables segment calculation |
+| Segmentation | `rfm_segment`, `customer_status`, `customer_lifecycle_stage`, `is_repeat_customer` | Business classifications derived from scores — primary output for marketing dashboards |
+| Purchase History | `first_purchase_date`, `last_purchase_date`, `avg_quantity_per_transaction`, `total_transactions` | Temporal and volume context — helps analysts understand purchase patterns |
+| Store Preference | `primary_store_id`, `primary_store_type`, `primary_store_transaction_count`, `store_loyalty_score` | Where the customer shops most — enables store-level customer analysis |
+| Audit | `created_at`, `updated_at` | Row-level timestamps for incremental refresh tracking |
+
 ### Gold
 
-KPI aggregates for dashboards and downstream analytics. Materialized as **tables**.
+KPI aggregates for dashboards and downstream analytics. Materialized as **tables**. All gold models denormalize store metadata (`store_type`, `latitude`, `longitude`, `opening`, `closing`) so that BI tools can query a single table without additional joins — the standard "wide table" pattern in data warehousing.
 
-| Model | Description | Key Metrics |
-|-------|-------------|-------------|
-| `basket_analysis_per_store` | Store-level basket KPIs | avg/min/max/stddev basket size, item count, total transactions |
-| `product_trend_per_store` | Product sales trends with 30/60/90d windows | sales velocity, trend direction, percentage change |
-| `nb_clients_per_store` | Client engagement per store | unique clients, avg transactions per client, total quantity |
+**`basket_analysis_per_store`** -- Store-level basket KPIs:
+
+| Group | Columns | Why |
+|-------|---------|-----|
+| Key | `store_id` | Primary key — one row per store |
+| Basket Metrics | `avg_basket_size`, `avg_basket_item_count`, `stddev_basket_size`, `min_basket_size`, `max_basket_size` | Distribution statistics — shows whether baskets are consistent or highly variable |
+| Volume | `total_transactions` | Activity level — context for the averages |
+| Store Metadata | `store_type`, `latitude`, `longitude`, `opening`, `closing` | Denormalized from bronze `stores` — dashboard-ready |
+| Audit | `created_at` | Row-level timestamp |
+
+**`product_trend_per_store`** -- Product sales trends with 30/60/90-day windows:
+
+| Group | Columns | Why |
+|-------|---------|-----|
+| Composite Key | `store_id`, `product_id` | One row per store-product combination |
+| Time Windows | `sales_30d`, `sales_60d`, `sales_90d`, `total_sales_all_time` | Sales volume in progressively wider windows — answers "is this product growing or declining?" |
+| Trend Indicators | `trend_direction`, `trend_30d_vs_60d_pct`, `sales_velocity_30d` | Derived signals — the core value of this model. Direction + velocity enable automated reordering decisions |
+| Volume | `transaction_count` | Activity context |
+| Product Metadata | `brand`, `ean` | Denormalized from bronze `products` — enables brand-level trend analysis |
+| Store Metadata | `store_type` | Denormalized — enables filtering by store type |
+| Audit | `created_at` | Row-level timestamp |
+
+**`nb_clients_per_store`** -- Client engagement per store:
+
+| Group | Columns | Why |
+|-------|---------|-----|
+| Key | `store_id` | Primary key — one row per store |
+| Client Metrics | `nb_clients`, `avg_transactions_per_client` | Customer penetration and engagement — answers "how many customers visit and how often?" |
+| Volume | `total_transactions`, `total_quantity`, `avg_quantity` | Activity level and throughput — context for client metrics |
+| Store Metadata | `store_type`, `latitude`, `longitude`, `opening`, `closing` | Denormalized from bronze `stores` — dashboard-ready |
+| Audit | `created_at` | Row-level timestamp |
 
 ## Data Quality Tests
 

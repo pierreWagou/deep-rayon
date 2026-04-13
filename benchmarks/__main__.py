@@ -65,7 +65,6 @@ def main() -> None:
             f"    Est. cost:     ${result['cost_estimate_usd']}\n"
         )
 
-    spark.stop()
     print(f"{'=' * 60}")
     print("  Done")
     print(f"{'=' * 60}")

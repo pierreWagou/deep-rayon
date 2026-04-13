@@ -1,6 +1,11 @@
 -- bronze/clients.sql
 -- Bronze layer: 1:1 with source clients CSV (no PySpark equivalent — new staging logic)
 -- Handles: missing account_id column, type casting, deduplication
+--
+-- Data type safety: all columns are explicitly cast to expected types.
+-- If a CSV drop contains type mismatches (e.g., alphanumeric client IDs),
+-- the cast produces NULL and the where-clause filters the row out.
+-- The not_null schema tests downstream detect any data loss from failed casts.
 
 with source as (
     select * from {{ read_source('raw', 'clients', 'clients_500k.csv') }}

@@ -46,6 +46,19 @@ The DAG uses operators from `apache-airflow-providers-databricks`:
 - **`DatabricksRunNowOperator`** -- Triggers an existing Databricks job by ID and waits for completion. Each task passes different `notebook_params` to control which dbt command runs (`run`, `test`, `docs generate`, or `run-operation`).
 - **`DatabricksPartitionSensor`** -- Used in the mock plugin (`mock_databricks.py`) for local testing. Reserved for future use in the DAG (e.g., waiting for upstream data partitions before triggering the pipeline).
 
+### Why `wait_for_termination` instead of separate sensors
+
+The DAG uses `wait_for_termination=True` on each operator rather than separate `DatabricksRunSensor` tasks. This is a deliberate design choice:
+
+| Aspect | Separate sensors | `wait_for_termination=True` |
+|--------|-----------------|---------------------------|
+| DAG complexity | 8 tasks (4 operators + 4 sensors) | 4 tasks |
+| Error handling | Must handle sensor timeout + job failure separately | Job failure = task failure, single error path |
+| Run ID passing | Must pass `run_id` via XCom from operator to sensor | Not needed — same task handles submit + poll |
+| Behavior | Identical | Identical |
+
+Both approaches poll the Databricks API until the job finishes. The `wait_for_termination` approach is simpler: fewer tasks, no XCom plumbing, and one error path per task. A separate sensor would only be useful if the DAG needed to do other work while waiting — but in our sequential pipeline, each step depends on the previous one completing.
+
 Key configuration:
 
 ```python

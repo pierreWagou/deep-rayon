@@ -1,6 +1,10 @@
 -- bronze/transactions.sql
 -- Bronze layer: 1:1 with source transactions CSV (no PySpark equivalent — new staging logic)
 -- Handles: date format normalization, sign consistency, type casting
+--
+-- Data type safety: explicit casts on all columns. Type mismatches in CSV drops
+-- (e.g., product_id switching between integer and string) produce NULL → filtered
+-- by where-clause. Schema tests (not_null, relationships) catch any data loss.
 
 with source as (
     select * from {{ read_source('raw', 'transactions', 'transactions_500k.csv') }}

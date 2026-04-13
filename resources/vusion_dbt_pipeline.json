@@ -38,7 +38,7 @@
       "job_cluster_key": "dbt_cli",
       "dbt_task": {
         "project_directory": "/Workspace/dbt_project",
-        "commands": ["dbt deps", "dbt run --vars '{\"data_path\": \"<data_path>\"}'"],
+        "commands": ["dbt deps", "dbt seed", "dbt run --vars '{\"data_path\": \"<data_path>\"}'"],
         "warehouse_id": "<warehouse_id>"
       },
       "libraries": [
