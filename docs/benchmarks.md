@@ -73,18 +73,18 @@ ORDER BY client_count DESC
 
 ### On Databricks
 
-The benchmarks are deployed as a separate Databricks job (`vusion_benchmark`), independent from the daily dbt pipeline. Run it manually after the pipeline completes:
+The benchmarks are deployed as a separate Databricks job (`deep_rayon_benchmark`), independent from the daily dbt pipeline. Run it manually after the pipeline completes:
 
 ```bash
 # Build the wheel and deploy the bundle (includes both jobs)
 mise run bundle:deploy
 
 # Trigger the benchmark job
-databricks bundle run vusion_benchmark
+databricks bundle run deep_rayon_benchmark
 ```
 
-The dbt pipeline (`vusion_dbt_pipeline`) handles: dbt_run → dbt_test → dbt_docs → optimize_tables.
-The benchmark job (`vusion_benchmark`) runs independently: 4 queries via `python_wheel_task`.
+The dbt pipeline (`deep_rayon_dbt_pipeline`) handles: dbt_run → dbt_test → dbt_docs → optimize_tables.
+The benchmark job (`deep_rayon_benchmark`) runs independently: 4 queries via `python_wheel_task`.
 
 ### Testing locally
 

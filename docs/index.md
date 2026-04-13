@@ -118,7 +118,7 @@ left join stores s on wt.store_id = s.store_id
 ## Project Structure
 
 ```
-vusion/
+deep-rayon/
 ├── dbt_project/           # dbt models, tests, macros, schema docs
 ├── airflow/               # Airflow DAG + Docker Compose for local dev
 ├── reference/             # Original PySpark pipeline + test instructions

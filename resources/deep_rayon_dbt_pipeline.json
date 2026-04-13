@@ -1,8 +1,8 @@
 {
-  "name": "vusion_dbt_pipeline",
-  "description": "Vusion dbt transformation pipeline: build models, test data quality, generate documentation, and optimize Delta tables. Uses Databricks-native dbt_task (recommended since 2023.2+) instead of a notebook wrapper for cleaner dependency management and built-in logging.",
+  "name": "deep_rayon_dbt_pipeline",
+  "description": "Deep-Rayon dbt transformation pipeline: build models, test data quality, generate documentation, and optimize Delta tables. Uses Databricks-native dbt_task (recommended since 2023.2+) instead of a notebook wrapper for cleaner dependency management and built-in logging.",
   "tags": {
-    "project": "vusion",
+    "project": "deep-rayon",
     "team": "data-engineering"
   },
   "schedule": {

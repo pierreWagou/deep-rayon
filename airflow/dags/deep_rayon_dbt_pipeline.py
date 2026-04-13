@@ -1,5 +1,5 @@
 """
-Airflow DAG: vusion_dbt_pipeline
+Airflow DAG: deep_rayon_dbt_pipeline
 Orchestrates dbt transformations on Databricks with proper task dependencies,
 error handling, and monitoring.
 
@@ -9,7 +9,7 @@ Architecture:
   - Task flow: dbt_run → dbt_test → dbt_docs_generate → optimize_tables → notify
 
 Production: Uses DatabricksRunNowOperator to submit jobs on Databricks.
-Local dev: Can be tested with `airflow dags test vusion_dbt_pipeline`.
+Local dev: Can be tested with `airflow dags test deep_rayon_dbt_pipeline`.
 """
 
 from __future__ import annotations
@@ -24,7 +24,7 @@ from airflow import DAG
 # ── DAG configuration ──────────────────────────────────────────────────────────
 
 DATABRICKS_CONN_ID = "databricks_default"
-DBT_JOB_ID = "{{ var.value.vusion_dbt_job_id }}"
+DBT_JOB_ID = "{{ var.value.deep_rayon_dbt_job_id }}"
 
 default_args = {
     "owner": "data-engineering",
@@ -57,7 +57,7 @@ def on_failure_callback(context):
 # ── DAG definition ─────────────────────────────────────────────────────────────
 
 with DAG(
-    dag_id="vusion_dbt_pipeline",
+    dag_id="deep_rayon_dbt_pipeline",
     description="Orchestrate dbt transformations on Databricks: run → test → docs → optimize",
     schedule="0 3 * * *",  # Daily at 3 AM Paris time
     start_date=pendulum.datetime(2024, 1, 1, tz="Europe/Paris"),
@@ -65,7 +65,7 @@ with DAG(
     max_active_runs=1,
     default_args=default_args,
     on_failure_callback=on_failure_callback,
-    tags=["dbt", "databricks", "retail", "vusion"],
+    tags=["dbt", "databricks", "retail", "deep-rayon"],
     doc_md=__doc__,
 ) as dag:
     # ── Task Group: dbt transformation ──────────────────────────────────────

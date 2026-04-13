@@ -1,6 +1,6 @@
-name: 'vusion'
+name: 'deep_rayon'
 version: '1.0.0'
-profile: 'vusion'
+profile: 'deep_rayon'
 config-version: 2
 
 model-paths: ["models"]
@@ -11,7 +11,7 @@ clean-targets: ["target", "dbt_packages"]
 
 # ── Model configuration ──
 models:
-  vusion:
+  deep_rayon:
     bronze:
       +materialized: view
       +schema: bronze

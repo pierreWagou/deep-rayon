@@ -4,19 +4,19 @@
 # duration, files scanned, and estimated cost. Deployed as a Python wheel.
 #
 # Trigger manually after the dbt pipeline completes:
-#   databricks bundle run vusion_benchmark
+#   databricks bundle run deep_rayon_benchmark
 
 resources:
   jobs:
-    vusion_benchmark:
-      name: vusion_benchmark
+    deep_rayon_benchmark:
+      name: deep_rayon_benchmark
       description: >
         Run benchmark queries against the Vusion data platform.
         Measures query duration, files scanned, and estimated cost
         for 4 JOIN-heavy analytical queries.
 
       tags:
-        project: vusion
+        project: deep-rayon
         team: data-engineering
 
       # No schedule — triggered manually or by CI after the dbt pipeline
@@ -43,8 +43,8 @@ resources:
           description: Run 4 JOIN-heavy benchmark queries and measure performance
           job_cluster_key: benchmark
           python_wheel_task:
-            package_name: vusion
-            entry_point: vusion-benchmark
+            package_name: deep_rayon
+            entry_point: deep-rayon-benchmark
             parameters:
               - "--catalog"
               - "hive_metastore"

@@ -2,8 +2,8 @@
 Run benchmarks on Databricks.
 
 Entry points:
-  - Databricks job: python_wheel_task with entry_point "vusion-benchmark"
-  - Databricks CLI: databricks bundle run vusion_benchmark
+  - Databricks job: python_wheel_task with entry_point "deep-rayon-benchmark"
+  - Databricks CLI: databricks bundle run deep_rayon_benchmark
 """
 
 from __future__ import annotations

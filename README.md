@@ -91,7 +91,7 @@ Benchmarks measure 4 JOIN-heavy queries on Databricks (run after OPTIMIZE + Z-OR
 | Partition pruning (transactions) | Skips entire date partitions for time-range queries |
 | Photon engine | 2-5x faster on aggregation-heavy gold queries |
 
-Benchmarks run on Databricks as a separate job. Deploy with `mise run bundle:deploy`, then trigger with `databricks bundle run vusion_benchmark`.
+Benchmarks run on Databricks as a separate job. Deploy with `mise run bundle:deploy`, then trigger with `databricks bundle run deep_rayon_benchmark`.
 
 ## Databricks Deployment
 
@@ -106,7 +106,7 @@ databricks fs cp data/transactions_500k.csv dbfs:/FileStore/data/transactions_50
 mise run bundle:deploy
 
 # 3. Trigger the pipeline
-databricks bundle run vusion_dbt_pipeline
+databricks bundle run deep_rayon_dbt_pipeline
 ```
 
 The `data_path` variable controls where dbt reads CSV files. It's set via `BUNDLE_VAR_data_path` in `.env` (see below).
@@ -138,7 +138,7 @@ Variables prefixed with `BUNDLE_VAR_` are automatically picked up by `databricks
 ## Project Structure
 
 ```
-vusion/
+deep-rayon/
 ├── dbt_project/           # dbt models, tests, macros, schema docs
 ├── airflow/               # Airflow DAG + Docker Compose for local dev
 ├── reference/             # Original PySpark pipeline + test instructions

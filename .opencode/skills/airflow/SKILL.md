@@ -26,7 +26,7 @@ Airflow only submits and monitors Databricks jobs — no dbt/data dependencies.
 
 | DAG | Schedule | Description |
 |---|---|---|
-| `vusion_dbt_pipeline` | `0 3 * * *` | Full dbt pipeline: run → test → docs → optimize |
+| `deep_rayon_dbt_pipeline` | `0 3 * * *` | Full dbt pipeline: run → test → docs → optimize |
 
 ## Task Flow
 
@@ -43,7 +43,7 @@ airflow/
   Dockerfile                        # apache/airflow + databricks provider
   docker-compose.yml                # Local Airflow (airflow standalone, SQLite)
   dags/
-    vusion_dbt_pipeline.py          # Main orchestration DAG
+    deep_rayon_dbt_pipeline.py          # Main orchestration DAG
   plugins/
     mock_databricks.py              # Mock Databricks operators for local dev
 ```

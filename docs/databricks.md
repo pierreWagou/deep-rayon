@@ -5,16 +5,16 @@ Databricks Asset Bundle (DAB) for the Vusion dbt pipeline. Declarative YAML form
 ## Bundle Structure
 
 ```
-vusion/
+deep-rayon/
 ├── databricks.yml                          # Bundle config (targets, variables)
 └── resources/
-    ├── vusion_dbt_pipeline.yml             # dbt pipeline job (daily)
-    └── vusion_benchmark.yml                # Benchmark job (manual trigger)
+    ├── deep_rayon_dbt_pipeline.yml             # dbt pipeline job (daily)
+    └── deep_rayon_benchmark.yml                # Benchmark job (manual trigger)
 ```
 
 ## Jobs
 
-### `vusion_dbt_pipeline` — Daily dbt Pipeline
+### `deep_rayon_dbt_pipeline` — Daily dbt Pipeline
 
 ```mermaid
 flowchart LR
@@ -32,16 +32,16 @@ All tasks use the `dbt_task` type (Databricks-native dbt CLI support). The dbt C
 
 Schedule: daily at 03:00 Europe/Paris, max 1 concurrent run.
 
-### `vusion_benchmark` — Performance Benchmarks
+### `deep_rayon_benchmark` — Performance Benchmarks
 
 | Task | Type | Retries |
 |------|------|---------|
 | `run_benchmarks` | `python_wheel_task` | 0 |
 
-Runs 4 JOIN-heavy benchmark queries and measures duration, files scanned, and estimated cost. Deployed as a Python wheel (`dist/vusion-*.whl`). Triggered manually after the dbt pipeline completes:
+Runs 4 JOIN-heavy benchmark queries and measures duration, files scanned, and estimated cost. Deployed as a Python wheel (`dist/deep_rayon-*.whl`). Triggered manually after the dbt pipeline completes:
 
 ```bash
-databricks bundle run vusion_benchmark
+databricks bundle run deep_rayon_benchmark
 ```
 
 ## Targets
@@ -104,7 +104,7 @@ databricks bundle validate --target dev
 databricks bundle deploy --target dev
 
 # Trigger a manual run
-databricks bundle run --target dev vusion_dbt_pipeline
+databricks bundle run --target dev deep_rayon_dbt_pipeline
 ```
 
 ### CI/CD (production)

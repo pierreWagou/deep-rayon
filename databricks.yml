@@ -8,7 +8,7 @@
 # See: https://docs.databricks.com/dev-tools/bundles/index.html
 
 bundle:
-  name: vusion-dbt-pipeline
+  name: deep-rayon-dbt-pipeline
 
 include:
   - resources/*.yml
@@ -34,7 +34,7 @@ variables:
 targets:
   # ── Development ────────────────────────────────────────────────────────────
   # Uses the "test" profile from ~/.databrickscfg for auth.
-  # Each developer gets their own prefixed copy: [dev username] vusion_dbt_pipeline
+  # Each developer gets their own prefixed copy: [dev username] deep_rayon_dbt_pipeline
   # Schedules are automatically paused in development mode.
   #
   # Variables are loaded from environment via BUNDLE_VAR_ prefix:

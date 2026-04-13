@@ -4,7 +4,7 @@ Airflow DAG for orchestrating the Vusion dbt pipeline on Databricks. Follows the
 
 ## DAG Overview
 
-**DAG ID:** `vusion_dbt_pipeline`
+**DAG ID:** `deep_rayon_dbt_pipeline`
 
 | Property | Value |
 |----------|-------|
@@ -64,13 +64,13 @@ Key configuration:
 ```python
 DatabricksRunNowOperator(
     databricks_conn_id="databricks_default",    # Airflow connection
-    job_id="{{ var.value.vusion_dbt_job_id }}",  # Templated from Airflow variable
+    job_id="{{ var.value.deep_rayon_dbt_job_id }}",  # Templated from Airflow variable
     wait_for_termination=True,                   # Synchronous execution
     polling_period_seconds=30,                   # Check status every 30s
 )
 ```
 
-The Databricks job ID is stored as an Airflow variable (`vusion_dbt_job_id`) rather than hardcoded, allowing environment-specific configuration without code changes.
+The Databricks job ID is stored as an Airflow variable (`deep_rayon_dbt_job_id`) rather than hardcoded, allowing environment-specific configuration without code changes.
 
 ## Error Handling
 
@@ -93,7 +93,7 @@ The Databricks job ID is stored as an Airflow variable (`vusion_dbt_job_id`) rat
 
 1. **Orchestration-only** -- Airflow manages job submission and monitoring. dbt and its Python dependencies live in the Databricks environment, not in Airflow. This avoids dependency conflicts and keeps the Airflow deployment lightweight.
 
-2. **Single Databricks job** -- All tasks reference the same `job_id` with different parameters. This maps to the multi-task Databricks job defined in `resources/vusion_dbt_pipeline.yml`. Airflow controls the execution order; Databricks handles compute.
+2. **Single Databricks job** -- All tasks reference the same `job_id` with different parameters. This maps to the multi-task Databricks job defined in `resources/deep_rayon_dbt_pipeline.yml`. Airflow controls the execution order; Databricks handles compute.
 
 3. **No catchup** -- The pipeline processes a full snapshot (not incremental), so historical runs would duplicate work without benefit.
 
@@ -138,7 +138,7 @@ The `plugins/mock_databricks.py` file monkey-patches the `execute` method at imp
 - `DatabricksRunNowOperator` → logs job ID and notebook params, sleeps 2s, returns a mock result
 - `DatabricksPartitionSensor` → immediately returns `True`
 
-The DAG source code (`dags/vusion_dbt_pipeline.py`) is **unchanged** — the same file runs in production with real Databricks operators.
+The DAG source code (`dags/deep_rayon_dbt_pipeline.py`) is **unchanged** — the same file runs in production with real Databricks operators.
 
 ### Stop Airflow
 
@@ -151,7 +151,7 @@ mise run airflow:down
 ```
 airflow/
 ├── dags/
-│   └── vusion_dbt_pipeline.py    # Production DAG (unchanged)
+│   └── deep_rayon_dbt_pipeline.py    # Production DAG (unchanged)
 ├── plugins/
 │   └── mock_databricks.py        # Mock Databricks operators for local dev
 ├── docker-compose.yml             # Single-container Airflow (standalone)

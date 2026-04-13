@@ -11,14 +11,14 @@
 
 resources:
   jobs:
-    vusion_dbt_pipeline:
-      name: vusion_dbt_pipeline
+    deep_rayon_dbt_pipeline:
+      name: deep_rayon_dbt_pipeline
       description: >
         Vusion dbt transformation pipeline: build models, test data quality,
         generate documentation, and optimize Delta tables.
 
       tags:
-        project: vusion
+        project: deep-rayon
         team: data-engineering
 
       schedule:

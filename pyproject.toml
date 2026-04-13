@@ -1,12 +1,12 @@
 [project]
-name = "vusion"
+name = "deep-rayon"
 version = "0.1.0"
 description = "Data platform for Vusion retail analytics — medallion architecture on DuckDB/Databricks"
 requires-python = ">=3.12"
 dependencies = []
 
 [project.scripts]
-vusion-benchmark = "benchmarks.__main__:main"
+deep-rayon-benchmark = "benchmarks.__main__:main"
 
 [build-system]
 requires = ["uv_build>=0.7.19,<0.8.0"]

@@ -26,7 +26,7 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
       - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
-      - AIRFLOW__WEBSERVER__SECRET_KEY=vusion-dev-key
+      - AIRFLOW__WEBSERVER__SECRET_KEY=deep-rayon-dev-key
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
       # Airflow variable used in the DAG (avoids "variable not found" errors)
       - AIRFLOW_VAR_VUSION_DBT_JOB_ID=99999

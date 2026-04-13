@@ -259,6 +259,6 @@ mise run dbt:docs
 
 ### Profiles
 
-- **dev** (default): DuckDB at `target/vusion.duckdb`. Zero-config, file-based. Used by `mise run dbt`.
+- **dev** (default): DuckDB at `target/deep_rayon.duckdb`. Zero-config, file-based. Used by `mise run dbt`.
 - **prod** (manual use only): Databricks + Unity Catalog. Requires `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` environment variables. For local testing against a Databricks workspace.
 - **databricks_cluster** (auto-generated): When running as a Databricks `dbt_task`, Databricks ignores `profiles.yml` and auto-generates its own profile using the `warehouse_id` from the job task config. No `--target` flag is needed in the job commands.

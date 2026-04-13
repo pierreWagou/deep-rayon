@@ -60,7 +60,7 @@ in-store analytics for large retail clients across the world.
 ## Project Structure
 
 ```
-vusion/
+deep-rayon/
 ├── dbt_project/            # dbt models, tests, macros, schema docs
 ├── airflow/                # Airflow DAG + Docker Compose for local dev
 ├── reference/              # Original PySpark pipeline + test instructions (read-only)
