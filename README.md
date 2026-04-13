@@ -1,6 +1,16 @@
-# Vusion Data Platform
+# ⚗️ Hyper-Rayon
 
-Production-grade retail data pipeline for [Vusion](https://www.vfrench.tech/), migrating a PySpark ETL to **dbt + Databricks** with a medallion architecture (Bronze / Silver / Gold).
+> Turning messy retail data into reliable store intelligence
+
+[![CI](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml)
+[![CD](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![dbt](https://img.shields.io/badge/dbt-1.11-FF694B.svg?logo=dbt)](https://docs.getdbt.com/)
+[![DuckDB](https://img.shields.io/badge/DuckDB-local%20dev-FEF000.svg?logo=duckdb)](https://duckdb.org/)
+[![Databricks](https://img.shields.io/badge/Databricks-production-FF3621.svg?logo=databricks)](https://www.databricks.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
+Production-grade retail data pipeline — take-home test for [Vusion](https://www.vusion.com/). Migrates a PySpark ETL to **dbt + Databricks** with a medallion architecture (Bronze / Silver / Gold).
 
 ## Quick Start
 
