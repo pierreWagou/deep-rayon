@@ -43,10 +43,11 @@ jobs:
         uses: actions/deploy-pages@v4
 
   # ── Databricks: validate + deploy bundle to production ─────────────────────
-  # Skipped until DATABRICKS_HOST is set to a real workspace URL.
-  # To enable: replace 'none' with your workspace URL in the 'databricks' environment.
+  # Disabled: no Databricks workspace configured yet.
+  # To enable: change 'if: false' to 'if: true' and configure the
+  # 'databricks' environment with DATABRICKS_HOST, DATABRICKS_TOKEN, etc.
   databricks-validate:
-    if: vars.DATABRICKS_HOST != 'none'
+    if: false
     runs-on: ubuntu-latest
     environment: databricks
     steps:
@@ -61,7 +62,7 @@ jobs:
 
   databricks-deploy:
     needs: databricks-validate
-    if: vars.DATABRICKS_HOST != 'none'
+    if: false
     runs-on: ubuntu-latest
     environment: databricks
     steps:
