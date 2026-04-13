@@ -29,11 +29,11 @@ Locally we use DuckDB; production targets Databricks with Unity Catalog.
 
 ## Model Layers
 
-| Layer | Prefix | Directory | Description |
+| Layer | Naming | Directory | Description |
 |---|---|---|---|
-| Bronze | `_bronze` | `models/bronze/` | 1:1 with source CSVs, type casting, column renaming, basic cleaning |
-| Silver | none | `models/silver/` | Business logic: RFM scoring, customer segmentation, status |
-| Gold | none | `models/gold/` | KPI datamarts: basket analysis, product trends, client counts |
+| Bronze | entity name | `models/bronze/` | 1:1 with source CSVs, type casting, column renaming, basic cleaning |
+| Silver | entity name | `models/silver/` | Business logic: RFM scoring, customer segmentation, status |
+| Gold | descriptive name | `models/gold/` | KPI datamarts: basket analysis, product trends, client counts |
 
 ## File Layout
 
@@ -45,19 +45,19 @@ dbt_project/
     bronze/
       _sources.yml                  # Source definitions for CSV files
       _bronze_models.yml            # Schema + tests for bronze models
-      clients_bronze.sql
-      stores_bronze.sql
-      products_bronze.sql
-      transactions_bronze.sql
+      clients.sql
+      stores.sql
+      products.sql
+      transactions.sql
     silver/
       _silver_models.yml            # Schema + tests for silver models
       _silver_unit_tests.yml        # Unit tests for RFM logic
-      customer_silver.sql           # RFM scoring, segmentation, status
+      customer.sql           # RFM scoring, segmentation, status
     gold/
       _gold_models.yml              # Schema + tests for gold models
-      basket_analysis_per_store_gold.sql
-      product_trend_per_store_gold.sql
-      nb_clients_per_store_gold.sql
+      basket_analysis_per_store.sql
+      product_trend_per_store.sql
+      nb_clients_per_store.sql
   tests/
     generic/                        # Custom generic tests (sign_consistency, positive_value, valid_date_range)
     assert_*.sql                    # Singular tests

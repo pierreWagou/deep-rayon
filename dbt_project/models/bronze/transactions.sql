@@ -1,4 +1,4 @@
--- bronze/transactions_bronze.sql
+-- bronze/transactions.sql
 -- Bronze layer: 1:1 with source transactions CSV (no PySpark equivalent — new staging logic)
 -- Handles: date format normalization, sign consistency, type casting
 
@@ -10,14 +10,10 @@ typed as (
     select
         cast(transaction_id as bigint)            as transaction_id,
         cast(client_id as bigint)                 as client_id,
-        -- Normalize date: handle YYYY-MM-DD, DD/MM/YYYY, MM-DD-YYYY, and ISO timestamps
-        -- try_strptime attempts each format in order; coalesce takes the first success
-        cast(coalesce(
-            try_strptime(cast(date as varchar), '%Y-%m-%d'),
-            try_strptime(cast(date as varchar), '%d/%m/%Y'),
-            try_strptime(cast(date as varchar), '%m-%d-%Y'),
-            try_strptime(cast(date as varchar), '%Y-%m-%dT%H:%M:%S')
-        ) as date)                                as transaction_date,
+        -- Normalize date: handles multiple formats via parse_date macro
+        -- DuckDB: try_strptime with YYYY-MM-DD, DD/MM/YYYY, MM-DD-YYYY, ISO timestamps
+        -- Databricks: native cast(date as date)
+        {{ parse_date('date') }}                  as transaction_date,
         cast(hour as integer)                     as hour,
         cast(minute as integer)                   as minute,
         cast(product_id as bigint)                as product_id,

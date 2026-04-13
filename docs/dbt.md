@@ -16,42 +16,45 @@ dbt build --target prod   # Databricks + Unity Catalog
 Bronze models use the `read_source` macro (`macros/read_source.sql`) to dispatch data reading based on the target:
 
 ```
-┌──────────────────────┐     ┌──────────────────────────────────────────┐
-│  --target dev        │     │  --target prod                           │
-│  (DuckDB)            │     │  (Databricks)                            │
-├──────────────────────┤     ├──────────────────────────────────────────┤
-│  read_csv(           │     │  {{ source('raw', 'transactions') }}     │
-│    'data/txn.csv',   │     │  → vusion_catalog.raw.transactions       │
-│    header=true,      │     │  (external table on Azure Blob Storage)  │
-│    auto_detect=true  │     │                                          │
-│  )                   │     │                                          │
-└──────────────────────┘     └──────────────────────────────────────────┘
+┌──────────────────────┐     ┌───────────────────────────────────────────┐
+│  DuckDB (local dev)  │     │  Databricks (production)                  │
+├──────────────────────┤     ├───────────────────────────────────────────┤
+│  read_csv(           │     │  read_files(                              │
+│    'data/txn.csv',   │     │    '/FileStore/data/txn.csv',             │
+│    header=true,      │     │    format => 'csv',                       │
+│    auto_detect=true  │     │    header => 'true'                       │
+│  )                   │     │  )                                        │
+└──────────────────────┘     └───────────────────────────────────────────┘
 ```
 
-**Local dev** -- DuckDB's `read_csv()` reads CSV files from the `data/` directory. The path is set by `vars.data_path` in `dbt_project.yml`.
+Both paths use the same `data_path` variable — the only difference is the function:
 
-**Production** -- `{{ source('raw', 'transactions') }}` resolves to `vusion_catalog.raw.transactions`. The catalog (`vusion_catalog`) comes from `profiles.yml` → `prod.catalog`, and the schema (`raw`) comes from `_sources.yml`. These are pre-existing external tables in Unity Catalog that already point to Azure Blob Storage. dbt does not need to know the blob path — the table definition in Unity Catalog handles that.
+- **DuckDB**: `read_csv()` with `auto_detect=true`
+- **Databricks**: `read_files()` with `format => 'csv'`
+
+The `data_path` variable is set in `dbt_project.yml` (default: `"data"` for local dev) and overridden via `--vars` on Databricks to point to DBFS, Unity Catalog Volumes, or Azure Blob Storage.
 
 Everything above bronze (silver, gold) uses `{{ ref() }}` and is fully adapter-agnostic -- no target-specific code.
 
 ### Where output tables are written
 
-| Layer | Local (DuckDB) | Production (Databricks) | Materialization |
-|-------|---------------|------------------------|-----------------|
-| Bronze | `main_bronze.*` | `vusion_catalog.retail_bronze.*` | View |
-| Silver | `main_silver.*` | `vusion_catalog.retail_silver.*` | Table |
-| Gold | `main_gold.*` | `vusion_catalog.retail_gold.*` | Table |
+| Layer | Local (DuckDB) | Databricks | Materialization |
+|-------|---------------|------------|-----------------|
+| Bronze | `bronze.*` | `bronze.*` | View |
+| Silver | `silver.*` | `silver.*` | Table |
+| Gold | `gold.*` | `gold.*` | Table |
 
-The schema is built from `profiles.yml` → `schema` (base: `retail`) + `dbt_project.yml` → `+schema` (suffix: `bronze`/`silver`/`gold`). Silver and gold are managed Delta tables — Databricks controls their physical storage automatically.
+Schema names match the medallion layer directly — no prefix. This is controlled by the `generate_schema_name` macro override, which uses the `+schema` value from `dbt_project.yml` without prepending the target schema.
 
 ### Configuration files
 
 | File | Purpose |
 |------|---------|
 | `profiles.yml` | Defines `dev` (DuckDB) and `prod` (Databricks) connection targets |
-| `dbt_project.yml` → `vars.data_path` | CSV directory for local dev (`data/`) |
-| `_sources.yml` → `schema` | Source schema for prod (`raw`); catalog comes from `profiles.yml` |
-| `macros/read_source.sql` | Target-aware dispatch: `read_csv()` on DuckDB, `{{ source() }}` on Databricks |
+| `dbt_project.yml` → `vars.data_path` | CSV directory — `"data"` locally, overridden via `--vars` on Databricks |
+| `databricks.yml` → `variables.data_path` | Per-target data path: `/FileStore/data` (dev), `abfss://...` (prod) |
+| `macros/read_source.sql` | Target-aware dispatch: `read_csv()` on DuckDB, `read_files()` on Databricks |
+| `macros/parse_date.sql` | Target-aware date parsing: `try_strptime` on DuckDB, `cast(x as date)` on Databricks |
 | `macros/optimize_tables.sql` | OPTIMIZE + Z-ORDER on Databricks, no-op on DuckDB |
 
 ## Model Layers
@@ -60,20 +63,20 @@ The schema is built from `profiles.yml` → `schema` (base: `retail`) + `dbt_pro
 flowchart TD
     subgraph bronze_layer["Bronze"]
         direction TB
-        bc[clients_bronze<br/>view]
-        bs[stores_bronze<br/>view]
-        bp[products_bronze<br/>view]
-        bt[transactions_bronze<br/>view]
+        bc[clients<br/>view]
+        bs[stores<br/>view]
+        bp[products<br/>view]
+        bt[transactions<br/>view]
     end
 
     subgraph silver["Silver"]
-        cs[customer_silver<br/>table]
+        cs[customer<br/>table]
     end
 
     subgraph gold["Gold"]
-        ba[basket_analysis_per_store_gold<br/>table]
-        pt[product_trend_per_store_gold<br/>table]
-        nc[nb_clients_per_store_gold<br/>table]
+        ba[basket_analysis_per_store<br/>table]
+        pt[product_trend_per_store<br/>table]
+        nc[nb_clients_per_store<br/>table]
     end
 
     bc --> cs
@@ -97,16 +100,16 @@ flowchart TD
 
 | Model | Source File | Key Transformations |
 |-------|-----------|---------------------|
-| `clients_bronze` | `clients_500k.csv` | Type casting, nullable `account_id`, null filtering |
-| `stores_bronze` | `stores_500k.csv` | Store type normalization (`lower(trim(...))`), lat/lng extraction from `latlng` field |
-| `products_bronze` | `products_500k.csv` | Brand trimming, type casting, null filtering |
-| `transactions_bronze` | `transactions_500k.csv` | Date normalization, sign correction (quantity drives spend sign), zero-quantity exclusion |
+| `clients` | `clients_500k.csv` | Type casting, nullable `account_id`, null filtering |
+| `stores` | `stores_500k.csv` | Store type normalization (`lower(trim(...))`), lat/lng extraction from `latlng` field |
+| `products` | `products_500k.csv` | Brand trimming, type casting, null filtering |
+| `transactions` | `transactions_500k.csv` | Date normalization, sign correction (quantity drives spend sign), zero-quantity exclusion |
 
 ### Silver
 
 Business logic layer. Materialized as **tables** for performance.
 
-**`customer_silver`** -- RFM (Recency, Frequency, Monetary) customer analytics:
+**`customer`** -- RFM (Recency, Frequency, Monetary) customer analytics:
 
 - RFM metrics computed from transaction history
 - 1-5 scoring scale with fixed thresholds (matching PySpark reference)
@@ -120,9 +123,9 @@ KPI aggregates for dashboards and downstream analytics. Materialized as **tables
 
 | Model | Description | Key Metrics |
 |-------|-------------|-------------|
-| `basket_analysis_per_store_gold` | Store-level basket KPIs | avg/min/max/stddev basket size, item count, total transactions |
-| `product_trend_per_store_gold` | Product sales trends with 30/60/90d windows | sales velocity, trend direction, percentage change |
-| `nb_clients_per_store_gold` | Client engagement per store | unique clients, avg transactions per client, total quantity |
+| `basket_analysis_per_store` | Store-level basket KPIs | avg/min/max/stddev basket size, item count, total transactions |
+| `product_trend_per_store` | Product sales trends with 30/60/90d windows | sales velocity, trend direction, percentage change |
+| `nb_clients_per_store` | Client engagement per store | unique clients, avg transactions per client, total quantity |
 
 ## Data Quality Tests
 
@@ -132,12 +135,12 @@ The source data contains six known quality issues. All are handled in the bronze
 
 | # | Issue | Where | How It Is Handled | Test Coverage |
 |---|-------|-------|-------------------|---------------|
-| 1 | Missing `account_id` column | `clients_500k.csv` | Nullable cast in `clients_bronze` | Schema test: `account_id` allows null |
-| 2 | Inconsistent store type casing | `stores_500k.csv` | `lower(trim(...))` in `stores_bronze` | `accepted_values` test on `store_type` |
-| 3 | Missing `latitude`/`longitude` columns | `stores_500k.csv` | Fallback to `latlng` string parsing in `stores_bronze` | `not_null` (warn) on `latitude`/`longitude` |
-| 4 | Inconsistent brand naming | `products_500k.csv` | `trim(...)` in `products_bronze` | `not_null` on `brand` |
-| 5 | Multiple date formats | `transactions_500k.csv` | `cast(... as date)` in `transactions_bronze` | `valid_date_range` generic test, `not_null` on `transaction_date` |
-| 6 | Sign inconsistency (quantity vs spend) | `transactions_500k.csv` | Quantity sign drives spend correction in `transactions_bronze` | `sign_consistency` generic test, singular sign assertion |
+| 1 | Missing `account_id` column | `clients_500k.csv` | Nullable cast in `clients` | Schema test: `account_id` allows null |
+| 2 | Inconsistent store type casing | `stores_500k.csv` | `lower(trim(...))` in `stores` | `accepted_values` test on `store_type` |
+| 3 | Missing `latitude`/`longitude` columns | `stores_500k.csv` | Fallback to `latlng` string parsing in `stores` | `not_null` (warn) on `latitude`/`longitude` |
+| 4 | Inconsistent brand naming | `products_500k.csv` | `trim(...)` in `products` | `not_null` on `brand` |
+| 5 | Multiple date formats | `transactions_500k.csv` | `cast(... as date)` in `transactions` | `valid_date_range` generic test, `not_null` on `transaction_date` |
+| 6 | Sign inconsistency (quantity vs spend) | `transactions_500k.csv` | Quantity sign drives spend correction in `transactions` | `sign_consistency` generic test, singular sign assertion |
 
 ### Test Types
 
@@ -181,11 +184,11 @@ Delta Lake optimization for Databricks production. Implemented as a dbt macro in
 
 | Table | Z-ORDER Columns | Partitioning | Rationale |
 |-------|----------------|--------------|-----------|
-| `customer_silver` | `client_id`, `rfm_segment`, `customer_status` | None | 500K rows; Z-ORDER sufficient for filter/join queries |
-| `basket_analysis_per_store_gold` | `store_id`, `store_type` | None | Small aggregate; fits in a few files |
-| `product_trend_per_store_gold` | `store_id`, `product_id`, `trend_direction` | None | Aggregate; multi-column filter patterns |
-| `nb_clients_per_store_gold` | `store_id`, `store_type` | None | Small aggregate |
-| `transactions_bronze` (if materialized) | `transaction_date`, `client_id`, `store_id` | `PARTITION BY (transaction_date)` | Largest table; date partitioning for time-range queries |
+| `customer` | `client_id`, `rfm_segment`, `customer_status` | None | 500K rows; Z-ORDER sufficient for filter/join queries |
+| `basket_analysis_per_store` | `store_id`, `store_type` | None | Small aggregate; fits in a few files |
+| `product_trend_per_store` | `store_id`, `product_id`, `trend_direction` | None | Aggregate; multi-column filter patterns |
+| `nb_clients_per_store` | `store_id`, `store_type` | None | Small aggregate |
+| `transactions` (if materialized) | `transaction_date`, `client_id`, `store_id` | `PARTITION BY (transaction_date)` | Largest table; date partitioning for time-range queries |
 
 **Scaling considerations:**
 
@@ -218,5 +221,6 @@ mise run dbt:docs
 
 ### Profiles
 
-- **dev** (default): DuckDB at `target/vusion.duckdb`. Zero-config, file-based.
-- **prod**: Databricks + Unity Catalog. Requires `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` environment variables (injected by the Databricks job at runtime).
+- **dev** (default): DuckDB at `target/vusion.duckdb`. Zero-config, file-based. Used by `mise run dbt`.
+- **prod** (manual use only): Databricks + Unity Catalog. Requires `DATABRICKS_HOST`, `DATABRICKS_HTTP_PATH`, `DATABRICKS_TOKEN` environment variables. For local testing against a Databricks workspace.
+- **databricks_cluster** (auto-generated): When running as a Databricks `dbt_task`, Databricks ignores `profiles.yml` and auto-generates its own profile using the `warehouse_id` from the job task config. No `--target` flag is needed in the job commands.

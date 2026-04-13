@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: clients_bronze
+  - name: clients
     description: >
       Cleaned client/customer master data. 1:1 with source CSV.
       Handles missing account_id, type casting, and null filtering.
@@ -20,7 +20,7 @@ models:
       - name: account_id
         description: Fidelity card number (nullable — may be missing in some file drops)
 
-  - name: stores_bronze
+  - name: stores
     description: >
       Cleaned store master data with normalized types and parsed coordinates.
       Handles missing lat/lng columns, store type casing normalization.
@@ -57,7 +57,7 @@ models:
               config:
                 severity: warn
 
-  - name: products_bronze
+  - name: products
     description: >
       Cleaned product catalog. Handles type casting and brand normalization.
     columns:
@@ -77,7 +77,7 @@ models:
       - name: description
         description: Product description text
 
-  - name: transactions_bronze
+  - name: transactions
     description: >
       Cleaned transaction records with normalized dates and sign-corrected
       quantity/spend values. Handles date format variations and sign inconsistencies.
@@ -88,11 +88,11 @@ models:
           - unique
           - not_null
       - name: client_id
-        description: Foreign key to clients_bronze.client_id
+        description: Foreign key to clients.client_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('clients_bronze')
+              to: ref('clients')
               field: client_id
               config:
                 severity: warn
@@ -111,11 +111,11 @@ models:
         data_tests:
           - not_null
       - name: product_id
-        description: Foreign key to products_bronze.product_id
+        description: Foreign key to products.product_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('products_bronze')
+              to: ref('products')
               field: product_id
               config:
                 severity: warn
@@ -130,11 +130,11 @@ models:
         data_tests:
           - not_null
       - name: store_id
-        description: Foreign key to stores_bronze.store_id
+        description: Foreign key to stores.store_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('stores_bronze')
+              to: ref('stores')
               field: store_id
               config:
                 severity: warn

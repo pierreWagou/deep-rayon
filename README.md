@@ -31,7 +31,7 @@ mise run dev          # Start docs + dbt-docs + Airflow (mprocs)
 
 ```
 CSV sources  →  Bronze (views)  →  Silver (tables)  →  Gold (tables)
-4 files          *_bronze            customer_silver     basket_analysis
+4 files          clients, stores     customer        basket_analysis
 500K rows        type casting        RFM scoring         product_trend
                  sign correction     segmentation        nb_clients
                  normalization       lifecycle
@@ -39,9 +39,9 @@ CSV sources  →  Bronze (views)  →  Silver (tables)  →  Gold (tables)
 
 | Layer | Models | Purpose |
 |-------|--------|---------|
-| **Bronze** | `clients_bronze`, `stores_bronze`, `products_bronze`, `transactions_bronze` | 1:1 with CSVs. Type casting, sign correction, normalization. |
-| **Silver** | `customer_silver` | RFM scoring (1-5), 8 segments, lifecycle, store loyalty. |
-| **Gold** | `basket_analysis_per_store_gold`, `product_trend_per_store_gold`, `nb_clients_per_store_gold` | Store-level KPIs for dashboards. |
+| **Bronze** | `clients`, `stores`, `products`, `transactions` | 1:1 with CSVs. Type casting, sign correction, normalization. |
+| **Silver** | `customer` | RFM scoring (1-5), 8 segments, lifecycle, store loyalty. |
+| **Gold** | `basket_analysis_per_store`, `product_trend_per_store`, `nb_clients_per_store` | Store-level KPIs for dashboards. |
 
 ## Key Design Decisions
 
@@ -62,11 +62,11 @@ Six issues handled in the bronze layer: missing columns, inconsistent casing, mu
 
 | Table | Strategy | Z-ORDER Columns | Partitioning | Rationale |
 |-------|----------|----------------|--------------|-----------|
-| `transactions_bronze` | OPTIMIZE | *(none)* | `transaction_date` at scale | Largest table (500K→billions); compact small files from hourly ingestion |
-| `customer_silver` | OPTIMIZE + Z-ORDER | `client_id`, `rfm_segment`, `customer_status` | None (500K rows) | Filter/join on client_id; segment-based dashboards |
-| `basket_analysis_per_store_gold` | OPTIMIZE + Z-ORDER | `store_id`, `store_type` | None (aggregated) | Store-level queries always filter by store_id/type |
-| `product_trend_per_store_gold` | OPTIMIZE + Z-ORDER | `store_id`, `product_id`, `trend_direction` | None (aggregated) | Multi-column filters in product analysis |
-| `nb_clients_per_store_gold` | OPTIMIZE + Z-ORDER | `store_id`, `store_type` | None (aggregated) | Same access pattern as basket analysis |
+| `transactions` | OPTIMIZE | *(none)* | `transaction_date` at scale | Largest table (500K→billions); compact small files from hourly ingestion |
+| `customer` | OPTIMIZE + Z-ORDER | `client_id`, `rfm_segment`, `customer_status` | None (500K rows) | Filter/join on client_id; segment-based dashboards |
+| `basket_analysis_per_store` | OPTIMIZE + Z-ORDER | `store_id`, `store_type` | None (aggregated) | Store-level queries always filter by store_id/type |
+| `product_trend_per_store` | OPTIMIZE + Z-ORDER | `store_id`, `product_id`, `trend_direction` | None (aggregated) | Multi-column filters in product analysis |
+| `nb_clients_per_store` | OPTIMIZE + Z-ORDER | `store_id`, `store_type` | None (aggregated) | Same access pattern as basket analysis |
 
 ### Query Optimization
 
@@ -82,7 +82,7 @@ Six issues handled in the bronze layer: missing columns, inconsistent casing, mu
 
 ### Impact
 
-Benchmarks measure 4 JOIN-heavy queries on DuckDB (500K rows). On Databricks with Delta Lake optimizations:
+Benchmarks measure 4 JOIN-heavy queries on Databricks (run after OPTIMIZE + Z-ORDER). Expected impact with Delta Lake optimizations:
 
 | Optimization | Expected Impact |
 |---|---|
@@ -93,11 +93,35 @@ Benchmarks measure 4 JOIN-heavy queries on DuckDB (500K rows). On Databricks wit
 
 Benchmarks run on Databricks as a separate job. Deploy with `mise run bundle:deploy`, then trigger with `databricks bundle run vusion_benchmark`.
 
+## Databricks Deployment
+
+```bash
+# 1. Upload source CSV files (one-time)
+databricks fs cp data/clients_500k.csv dbfs:/FileStore/data/clients_500k.csv
+databricks fs cp data/stores_500k.csv dbfs:/FileStore/data/stores_500k.csv
+databricks fs cp data/products_500k.csv dbfs:/FileStore/data/products_500k.csv
+databricks fs cp data/transactions_500k.csv dbfs:/FileStore/data/transactions_500k.csv
+
+# 2. Build wheel + deploy bundle
+mise run bundle:deploy
+
+# 3. Trigger the pipeline
+databricks bundle run vusion_dbt_pipeline
+```
+
+The `data_path` variable controls where dbt reads CSV files. It's set per target in `databricks.yml`:
+
+| Target | `data_path` | Description |
+|--------|-------------|-------------|
+| dev | `/FileStore/data` | DBFS — for testing on Databricks |
+| prod | `abfss://<container>@<account>.dfs.core.windows.net/data` | Azure Blob Storage — production |
+| local | `data` | Local `data/` directory (DuckDB) |
+
 ## CI/CD
 
 | Pipeline | Trigger | Steps |
 |----------|---------|-------|
-| **CI** | PR to main | Ruff lint → dbt build → benchmarks → MkDocs build → bundle validate |
+| **CI** | Push/PR to main | Ruff lint → dbt build → MkDocs build → bundle validate |
 | **CD** | Merge to main | MkDocs deploy (GitHub Pages) → Databricks bundle deploy (prod) |
 
 ## Project Structure
@@ -109,7 +133,7 @@ vusion/
 ├── reference/             # Original PySpark pipeline + test instructions
 ├── databricks.yml         # Databricks Asset Bundle config
 ├── resources/             # Bundle job definition
-├── benchmarks/            # Query performance benchmarks (pytest + Databricks wheel)
+├── benchmarks/            # Query performance benchmarks (Databricks wheel)
 ├── data/                  # Source CSV files (500K rows each)
 ├── docs/                  # MkDocs site content
 ├── .github/               # CI/CD workflows (lint, test, build, deploy)

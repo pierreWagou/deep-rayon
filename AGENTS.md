@@ -6,7 +6,7 @@ Tool versions and tasks are managed by [mise](https://mise.jdx.dev/) via `mise.t
 
 - **Tools:** Python 3.12, uv, mprocs (auto-installed with `mise install`)
 - **Bootstrap:** `mise run setup` (syncs deps + pre-commit hooks)
-- **Full CI check:** `mise run check` — runs pre-commit (ruff, ty, yamllint, sqlfluff, pytest, dbt build, benchmarks)
+- **Full CI check:** `mise run check` — runs pre-commit (ruff, ty, yamllint, sqlfluff, pytest, dbt build)
 - **Run dbt:** `mise run dbt` (build all models in DuckDB)
 - **Start all services:** `mise run dev` (docs + dbt-docs + Airflow via mprocs)
 - **Serve docs:** `mise run docs` (MkDocs Material on localhost:8100)
@@ -66,7 +66,7 @@ vusion/
 ├── reference/              # Original PySpark pipeline + test instructions (read-only)
 ├── databricks.yml          # Databricks Asset Bundle config
 ├── resources/              # Bundle job definition (YAML)
-├── benchmarks/             # Query performance benchmarks (pytest + Databricks wheel)
+├── benchmarks/             # Query performance benchmarks (Databricks wheel)
 ├── tests/                  # Python unit tests
 ├── data/                   # Source CSV files (simulating Azure Blob Storage)
 ├── docs/                   # MkDocs content (standalone pages)

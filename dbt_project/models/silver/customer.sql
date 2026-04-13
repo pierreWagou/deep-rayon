@@ -1,4 +1,4 @@
--- silver/customer_silver.sql
+-- silver/customer.sql
 -- Silver layer: Customer analytics with RFM scoring and segmentation
 -- Translated from: reference/pipeline/silver_customer_layer.py
 --
@@ -10,22 +10,22 @@
 --   5. Primary store preference and loyalty score
 
 with transactions as (
-    select * from {{ ref('transactions_bronze') }}
+    select * from {{ ref('transactions') }}
 ),
 
 clients as (
-    select * from {{ ref('clients_bronze') }}
+    select * from {{ ref('clients') }}
 ),
 
 stores as (
-    select * from {{ ref('stores_bronze') }}
+    select * from {{ ref('stores') }}
 ),
 
 -- Step 1: RFM Metrics
 rfm_metrics as (
     select
         client_id,
-        datediff('day', max(transaction_date), current_date)   as recency_days,
+        {{ datediff_days('max(transaction_date)', 'current_date') }}   as recency_days,
         count(distinct transaction_id)                          as frequency,
         sum(spend)                                              as monetary_value,
         min(transaction_date)                                   as first_purchase_date,

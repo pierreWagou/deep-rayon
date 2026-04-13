@@ -70,12 +70,10 @@ jobs:
       - uses: astral-sh/setup-uv@v6
       - name: Install Databricks CLI
         uses: databricks/setup-cli@main
-      - name: Build wheel
-        run: uv build --wheel
       - name: Deploy bundle to production
         env:
           DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
           DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
-          DATABRICKS_PROD_WAREHOUSE_ID: ${{ vars.DATABRICKS_PROD_WAREHOUSE_ID }}
-          DATABRICKS_SP_NAME: ${{ vars.DATABRICKS_SP_NAME }}
+          BUNDLE_VAR_warehouse_id: ${{ vars.DATABRICKS_WAREHOUSE_ID }}
+          BUNDLE_VAR_data_path: ${{ vars.DATABRICKS_DATA_PATH }}
         run: databricks bundle deploy --target prod

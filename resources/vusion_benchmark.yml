@@ -21,7 +21,6 @@ resources:
 
       # No schedule — triggered manually or by CI after the dbt pipeline
       max_concurrent_runs: 1
-      timeout_seconds: 600
 
       email_notifications:
         on_failure:
@@ -30,7 +29,7 @@ resources:
       job_clusters:
         - job_cluster_key: benchmark
           new_cluster:
-            spark_version: "14.3.x-scala2.12"
+            spark_version: "16.4.x-scala2.12"
             node_type_id: Standard_DS3_v2
             num_workers: 0
             spark_conf:
@@ -46,7 +45,11 @@ resources:
           python_wheel_task:
             package_name: vusion
             entry_point: vusion-benchmark
+            parameters:
+              - "--catalog"
+              - "hive_metastore"
+              - "--iterations"
+              - "3"
           libraries:
             - whl: ../dist/*.whl
-          timeout_seconds: 600
           max_retries: 0

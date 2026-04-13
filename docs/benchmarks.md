@@ -12,9 +12,9 @@ Aggregates daily sales by brand and store type. Tests the performance of the mos
 
 ```sql
 SELECT t.transaction_date, p.brand, s.store_type, ...
-FROM transactions_bronze t
-JOIN products_bronze p ON t.product_id = p.product_id
-JOIN stores_bronze s ON t.store_id = s.store_id
+FROM transactions t
+JOIN products p ON t.product_id = p.product_id
+JOIN stores s ON t.store_id = s.store_id
 GROUP BY t.transaction_date, p.brand, s.store_type
 ORDER BY t.transaction_date DESC, total_spend DESC
 ```
@@ -28,8 +28,8 @@ Computes revenue, unique clients, and average transaction value per store. Tests
 ```sql
 SELECT s.store_id, s.store_type, ...,
        SUM(t.spend) / NULLIF(COUNT(DISTINCT t.client_id), 0) AS revenue_per_client
-FROM transactions_bronze t
-JOIN stores_bronze s ON t.store_id = s.store_id
+FROM transactions t
+JOIN stores s ON t.store_id = s.store_id
 GROUP BY s.store_id, s.store_type, s.latitude, s.longitude
 ORDER BY total_revenue DESC
 ```
@@ -43,13 +43,13 @@ Builds per-transaction baskets, then computes client-level basket metrics by sto
 ```sql
 WITH baskets AS (
     SELECT client_id, transaction_id, store_id, ...
-    FROM transactions_bronze t
+    FROM transactions t
     GROUP BY client_id, transaction_id, store_id, transaction_date
 )
 SELECT c.client_id, c.name, s.store_type, ...
 FROM baskets b
-JOIN clients_bronze c ON b.client_id = c.client_id
-JOIN stores_bronze s ON b.store_id = s.store_id
+JOIN clients c ON b.client_id = c.client_id
+JOIN stores s ON b.store_id = s.store_id
 GROUP BY c.client_id, c.name, c.job, s.store_type
 HAVING COUNT(DISTINCT b.transaction_id) >= 2
 ORDER BY avg_basket_value DESC
@@ -60,11 +60,11 @@ LIMIT 1000
 
 **Join complexity:** Aggregation on silver layer (no joins)
 
-Groups the pre-computed `customer_silver` table by RFM segment, primary store type, and customer status. Tests read performance on the silver layer and validates that Z-ORDER on `rfm_segment` and `customer_status` would improve scan efficiency.
+Groups the pre-computed `customer` table by RFM segment, primary store type, and customer status. Tests read performance on the silver layer and validates that Z-ORDER on `rfm_segment` and `customer_status` would improve scan efficiency.
 
 ```sql
 SELECT cs.rfm_segment, cs.primary_store_type, cs.customer_status, ...
-FROM customer_silver cs
+FROM customer cs
 GROUP BY cs.rfm_segment, cs.primary_store_type, cs.customer_status
 ORDER BY client_count DESC
 ```
@@ -112,7 +112,7 @@ The benchmarks are designed to exercise the exact access patterns that table opt
 | Q1 | `transaction_date`, `product_id`, `store_id` | Z-ORDER on `transaction_date` + `store_id` enables file skipping on the transactions table |
 | Q2 | `store_id` filter + aggregation | Z-ORDER on `store_id` + `store_type` on gold tables reduces scan width |
 | Q3 | `client_id`, `store_id` multi-join | Z-ORDER on `client_id` + `store_id` on transactions improves join probe performance |
-| Q4 | `rfm_segment`, `customer_status` grouping | Z-ORDER on these columns in `customer_silver` enables efficient grouped scans |
+| Q4 | `rfm_segment`, `customer_status` grouping | Z-ORDER on these columns in `customer` enables efficient grouped scans |
 
 **DuckDB vs Databricks:** DuckDB runs all queries in-process on a single machine. The benchmark numbers reflect local performance only. On Databricks with Delta Lake, the same queries benefit from:
 

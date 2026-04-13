@@ -27,12 +27,12 @@
     ┌───────────────────────────────────┬─────────────────────────────────────────┬──────────────────────────────┐
     │ Table                             │ Z-ORDER columns                         │ Partitioning                 │
     ├───────────────────────────────────┼─────────────────────────────────────────┼──────────────────────────────┤
-    │ customer_silver                   │ client_id, rfm_segment, customer_status │ None (500K rows)             │
-    │ basket_analysis_per_store_gold    │ store_id, store_type                    │ None (aggregated, small)     │
-    │ product_trend_per_store_gold     │ store_id, product_id, trend_direction   │ None (aggregated)            │
-    │ nb_clients_per_store_gold        │ store_id, store_type                    │ None (aggregated, small)     │
+    │ customer                          │ client_id, rfm_segment, customer_status │ None (500K rows)             │
+    │ basket_analysis_per_store         │ store_id, store_type                    │ None (aggregated, small)     │
+    │ product_trend_per_store           │ store_id, product_id, trend_direction   │ None (aggregated)            │
+    │ nb_clients_per_store              │ store_id, store_type                    │ None (aggregated, small)     │
     ├───────────────────────────────────┼─────────────────────────────────────────┼──────────────────────────────┤
-    │ transactions_bronze (if materialized)│ transaction_date, client_id, store_id   │ PARTITION BY (transaction_date)│
+    │ transactions (if materialized)    │ transaction_date, client_id, store_id   │ PARTITION BY (transaction_date)│
     └───────────────────────────────────┴─────────────────────────────────────────┴──────────────────────────────┘
 
     Rationale:
@@ -50,17 +50,17 @@
 
 {% if target.type == 'databricks' %}
     -- Silver layer
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_silver.customer_silver
+    OPTIMIZE {{ target.catalog }}.silver.customer
     ZORDER BY (client_id, rfm_segment, customer_status);
 
     -- Gold layer
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.basket_analysis_per_store_gold
+    OPTIMIZE {{ target.catalog }}.gold.basket_analysis_per_store
     ZORDER BY (store_id, store_type);
 
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.product_trend_per_store_gold
+    OPTIMIZE {{ target.catalog }}.gold.product_trend_per_store
     ZORDER BY (store_id, product_id, trend_direction);
 
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.nb_clients_per_store_gold
+    OPTIMIZE {{ target.catalog }}.gold.nb_clients_per_store
     ZORDER BY (store_id, store_type);
 {% endif %}
 {% endmacro %}

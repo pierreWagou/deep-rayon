@@ -14,7 +14,7 @@ import re
 import time
 from collections.abc import Callable
 
-BENCHMARK_ITERATIONS = 3
+BENCHMARK_ITERATIONS = 3  # default, can be overridden via run_benchmark(iterations=N)
 
 # Databricks cost model for bonus estimate (i3.xlarge single-node, $0.25/DBU, ~2 DBU/h)
 DBU_RATE_PER_HOUR = 2.0
@@ -29,6 +29,7 @@ def run_benchmark(
     name: str,
     query: str,
     explain_prefix: str = "EXPLAIN ANALYZE",
+    iterations: int = BENCHMARK_ITERATIONS,
 ) -> dict:
     """Execute a query and return timing metrics.
 
@@ -38,20 +39,21 @@ def run_benchmark(
         query: SQL query to benchmark.
         explain_prefix: SQL prefix for execution plans.
             DuckDB uses "EXPLAIN ANALYZE", Spark uses "EXPLAIN EXTENDED".
+        iterations: Number of timed iterations (median is reported).
     """
     # Warm-up run
     execute(query)
 
     # Timed run (median of N iterations)
     durations = []
-    for _ in range(BENCHMARK_ITERATIONS):
+    for _ in range(iterations):
         start = time.perf_counter()
         result = execute(query)
         elapsed_ms = (time.perf_counter() - start) * 1000
         durations.append(elapsed_ms)
 
     durations.sort()
-    median_ms = durations[BENCHMARK_ITERATIONS // 2]
+    median_ms = durations[iterations // 2]
     row_count = len(result)
 
     # Execution plan + files scanned
@@ -87,9 +89,9 @@ SELECT
     SUM(t.quantity)                   AS total_quantity,
     SUM(t.spend)                      AS total_spend,
     COUNT(DISTINCT t.client_id)       AS unique_clients
-FROM {bronze}.transactions_bronze t
-JOIN {bronze}.products_bronze p ON t.product_id = p.product_id
-JOIN {bronze}.stores_bronze s ON t.store_id = s.store_id
+FROM {bronze}.transactions t
+JOIN {bronze}.products p ON t.product_id = p.product_id
+JOIN {bronze}.stores s ON t.store_id = s.store_id
 GROUP BY t.transaction_date, p.brand, s.store_type
 ORDER BY t.transaction_date DESC, total_spend DESC
 """
@@ -106,8 +108,8 @@ SELECT
     AVG(t.spend)                        AS avg_transaction_value,
     SUM(t.quantity)                     AS total_items_sold,
     SUM(t.spend) / NULLIF(COUNT(DISTINCT t.client_id), 0) AS revenue_per_client
-FROM {bronze}.transactions_bronze t
-JOIN {bronze}.stores_bronze s ON t.store_id = s.store_id
+FROM {bronze}.transactions t
+JOIN {bronze}.stores s ON t.store_id = s.store_id
 GROUP BY s.store_id, s.store_type, s.latitude, s.longitude
 ORDER BY total_revenue DESC
 """
@@ -122,7 +124,7 @@ WITH baskets AS (
         SUM(t.quantity)               AS basket_size,
         SUM(t.spend)                  AS basket_value,
         COUNT(DISTINCT t.product_id)  AS items_in_basket
-    FROM {bronze}.transactions_bronze t
+    FROM {bronze}.transactions t
     GROUP BY t.client_id, t.transaction_id, t.store_id, t.transaction_date
 )
 SELECT
@@ -136,8 +138,8 @@ SELECT
     MAX(b.basket_value)                  AS max_basket_value,
     AVG(b.items_in_basket)               AS avg_items_per_basket
 FROM baskets b
-JOIN {bronze}.clients_bronze c ON b.client_id = c.client_id
-JOIN {bronze}.stores_bronze s ON b.store_id = s.store_id
+JOIN {bronze}.clients c ON b.client_id = c.client_id
+JOIN {bronze}.stores s ON b.store_id = s.store_id
 GROUP BY c.client_id, c.name, c.job, s.store_type
 HAVING COUNT(DISTINCT b.transaction_id) >= 2
 ORDER BY avg_basket_value DESC
@@ -154,7 +156,7 @@ SELECT
     AVG(cs.monetary_value)                AS avg_monetary,
     AVG(cs.recency_days)                  AS avg_recency_days,
     AVG(cs.store_loyalty_score)           AS avg_loyalty_score
-FROM {silver}.customer_silver cs
+FROM {silver}.customer cs
 GROUP BY cs.rfm_segment, cs.primary_store_type, cs.customer_status
 ORDER BY client_count DESC
 """

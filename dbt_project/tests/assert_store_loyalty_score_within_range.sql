@@ -4,7 +4,7 @@
 select
     client_id,
     store_loyalty_score
-from {{ ref('customer_silver') }}
+from {{ ref('customer') }}
 where
     store_loyalty_score < 0
     or store_loyalty_score > 100

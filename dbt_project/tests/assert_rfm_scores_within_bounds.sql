@@ -6,7 +6,7 @@ select
     recency_score,
     frequency_score,
     monetary_score
-from {{ ref('customer_silver') }}
+from {{ ref('customer') }}
 where
     recency_score not between 1 and 5
     or frequency_score not between 1 and 5

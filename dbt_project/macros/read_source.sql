@@ -1,8 +1,12 @@
 -- macros/read_source.sql
--- Dual-target source reader: DuckDB (local CSV) vs Databricks (Unity Catalog)
+-- Dual-target source reader: DuckDB (local CSV) vs Databricks (CSV via read_files)
 --
--- On DuckDB (dev):  read_csv() from the local data/ directory
--- On Databricks (prod):  {{ source() }} referencing external tables in Unity Catalog
+-- On DuckDB (dev):       read_csv() from the local data/ directory
+-- On Databricks (prod):  read_files() from DBFS, Volumes, or Azure Blob Storage
+--
+-- The data_path variable controls the location on both targets:
+--   Local:      "data" (default in dbt_project.yml)
+--   Databricks: passed via --vars, e.g. "/FileStore/data" or "abfss://container@account.../data"
 --
 -- Usage in bronze models:
 --   select * from {{ read_source('raw', 'transactions', 'transactions_500k.csv') }}
@@ -15,6 +19,10 @@
             auto_detect = true
         )
     {% else %}
-        {{ source(source_name, table_name) }}
+        read_files(
+            '{{ var("data_path") }}/{{ csv_file }}',
+            format => 'csv',
+            header => 'true'
+        )
     {% endif %}
 {% endmacro %}

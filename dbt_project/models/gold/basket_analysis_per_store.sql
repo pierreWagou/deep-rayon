@@ -1,4 +1,4 @@
--- gold/basket_analysis_per_store_gold.sql
+-- gold/basket_analysis_per_store.sql
 -- Gold layer: Basket analysis KPIs aggregated by store
 -- Translated from: reference/pipeline/gold_datamart_kpis.py (lines 152-202)
 --
@@ -9,11 +9,11 @@
 --   - Store metadata (type, location, hours)
 
 with transactions as (
-    select * from {{ ref('transactions_bronze') }}
+    select * from {{ ref('transactions') }}
 ),
 
 stores as (
-    select * from {{ ref('stores_bronze') }}
+    select * from {{ ref('stores') }}
 ),
 
 -- Per-basket aggregation: group by store + transaction

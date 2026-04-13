@@ -13,18 +13,32 @@ bundle:
 include:
   - resources/*.yml
 
+# ── Wheel artifact: built automatically during `databricks bundle deploy` ──
+artifacts:
+  benchmarks:
+    type: whl
+    build: uv build --wheel
+    path: .
+
 variables:
   warehouse_id:
     description: SQL warehouse ID for dbt and SQL tasks
   notification_email:
     description: Email for job failure notifications
     default: data-engineering@vusion.com
+  data_path:
+    description: >
+      Path to source CSV files on Databricks.
+      Dev: DBFS path. Prod: Azure Blob Storage (ABFSS) path.
 
 targets:
   # ── Development ────────────────────────────────────────────────────────────
   # Uses the "test" profile from ~/.databrickscfg for auth.
   # Each developer gets their own prefixed copy: [dev username] vusion_dbt_pipeline
   # Schedules are automatically paused in development mode.
+  #
+  # Variables are loaded from environment via BUNDLE_VAR_ prefix:
+  #   BUNDLE_VAR_warehouse_id  ← set in .env, loaded by mise
   dev:
     mode: development
     default: true
@@ -32,15 +46,10 @@ targets:
       profile: test
 
   # ── Production ─────────────────────────────────────────────────────────────
-  # Auth via env vars (DATABRICKS_HOST + DATABRICKS_TOKEN) set by CI/CD.
+  # Auth via DATABRICKS_HOST + DATABRICKS_TOKEN env vars set by CI/CD.
   # Single shared deployment under /Shared/.bundle/prod/
   # Runs on schedule. Deployed by CI/CD only.
   prod:
     mode: production
     workspace:
-      host: ${DATABRICKS_HOST}
       root_path: /Shared/.bundle/prod/${bundle.name}
-    run_as:
-      service_principal_name: ${DATABRICKS_SP_NAME}
-    variables:
-      warehouse_id: ${DATABRICKS_PROD_WAREHOUSE_ID}

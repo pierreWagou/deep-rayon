@@ -1,4 +1,4 @@
--- gold/product_trend_per_store_gold.sql
+-- gold/product_trend_per_store.sql
 -- Gold layer: Product sales trends per store with 30/60/90-day windows
 -- Translated from: reference/pipeline/gold_datamart_kpis.py (lines 206-283)
 -- NOTE: Fixed bug from PySpark reference (line 265) where join used
@@ -11,15 +11,15 @@
 --   - Product and store metadata
 
 with transactions as (
-    select * from {{ ref('transactions_bronze') }}
+    select * from {{ ref('transactions') }}
 ),
 
 products as (
-    select * from {{ ref('products_bronze') }}
+    select * from {{ ref('products') }}
 ),
 
 stores as (
-    select * from {{ ref('stores_bronze') }}
+    select * from {{ ref('stores') }}
 ),
 
 -- Add period flags based on transaction date relative to current date
@@ -29,11 +29,11 @@ with_periods as (
         product_id,
         quantity,
         transaction_date,
-        case when datediff('day', transaction_date, current_date) <= 30
+        case when {{ datediff_days('transaction_date', 'current_date') }} <= 30
              then quantity else 0 end as sales_30d,
-        case when datediff('day', transaction_date, current_date) <= 60
+        case when {{ datediff_days('transaction_date', 'current_date') }} <= 60
              then quantity else 0 end as sales_60d,
-        case when datediff('day', transaction_date, current_date) <= 90
+        case when {{ datediff_days('transaction_date', 'current_date') }} <= 90
              then quantity else 0 end as sales_90d
     from transactions
 ),

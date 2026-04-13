@@ -14,20 +14,20 @@ flowchart LR
     end
 
     subgraph Bronze["Bronze"]
-        bc[clients_bronze]
-        bs[stores_bronze]
-        bp[products_bronze]
-        bt[transactions_bronze]
+        bc[clients]
+        bs[stores]
+        bp[products]
+        bt[transactions]
     end
 
     subgraph Silver["Silver — Business Logic"]
-        customer_silver[customer_silver<br/>RFM scoring + segmentation]
+        customer[customer<br/>RFM scoring + segmentation]
     end
 
     subgraph Gold["Gold — KPIs"]
-        basket[basket_analysis_per_store_gold]
-        trend[product_trend_per_store_gold]
-        clients[nb_clients_per_store_gold]
+        basket[basket_analysis_per_store]
+        trend[product_trend_per_store]
+        clients[nb_clients_per_store]
     end
 
     CSV1 --> bc
@@ -35,9 +35,9 @@ flowchart LR
     CSV3 --> bp
     CSV4 --> bt
 
-    bc --> customer_silver
-    bs --> customer_silver
-    bt --> customer_silver
+    bc --> customer
+    bs --> customer
+    bt --> customer
 
     bt --> basket
     bs --> basket
@@ -52,9 +52,9 @@ flowchart LR
 
 | Layer | Models | Materialization | Purpose |
 |-------|--------|-----------------|---------|
-| **Bronze** | `clients_bronze`, `stores_bronze`, `products_bronze`, `transactions_bronze` | View | 1:1 with source CSVs. Type casting, date normalization, sign correction. |
-| **Silver** | `customer_silver` | Table | RFM scoring, customer segmentation, lifecycle status, store loyalty. |
-| **Gold** | `basket_analysis_per_store_gold`, `product_trend_per_store_gold`, `nb_clients_per_store_gold` | Table | Store-level KPIs ready for dashboards and downstream analytics. |
+| **Bronze** | `clients`, `stores`, `products`, `transactions` | View | 1:1 with source CSVs. Type casting, date normalization, sign correction. |
+| **Silver** | `customer` | Table | RFM scoring, customer segmentation, lifecycle status, store loyalty. |
+| **Gold** | `basket_analysis_per_store`, `product_trend_per_store`, `nb_clients_per_store` | Table | Store-level KPIs ready for dashboards and downstream analytics. |
 
 ## Quick Start
 
@@ -94,7 +94,7 @@ Six known issues handled in the bronze layer:
 
 ## Bug Fix
 
-The original PySpark contains a join error in `product_trend_per_store_gold` (line 265 of [`gold_datamart_kpis.py`](https://github.com/pierreWagou/vusion/blob/main/reference/pipeline/gold_datamart_kpis.py#L265)):
+The original PySpark contains a join error in `product_trend_per_store` (line 265 of [`gold_datamart_kpis.py`](https://github.com/pierreWagou/vusion/blob/main/reference/pipeline/gold_datamart_kpis.py#L265)):
 
 ```python
 # ORIGINAL (buggy): joins stores on product_id instead of store_id
@@ -112,7 +112,7 @@ left join stores s on wt.store_id = s.store_id
 
 | Pipeline | Trigger | Steps |
 |----------|---------|-------|
-| **CI** | Push/PR to main | Ruff lint → dbt build → benchmarks → MkDocs build → bundle validate |
+| **CI** | Push/PR to main | Ruff lint → dbt build → MkDocs build → bundle validate |
 | **CD** | Merge to main | MkDocs deploy (GitHub Pages) → Databricks bundle deploy (prod) |
 
 ## Project Structure
@@ -124,7 +124,7 @@ vusion/
 ├── reference/             # Original PySpark pipeline + test instructions
 ├── databricks.yml         # Databricks Asset Bundle config
 ├── resources/             # Bundle job definition
-├── benchmarks/            # Query performance benchmarks (pytest + Databricks wheel)
+├── benchmarks/            # Query performance benchmarks (Databricks wheel)
 ├── data/                  # Source CSV files (500K rows each)
 ├── docs/                  # MkDocs site content
 ├── .github/               # CI/CD workflows (lint, test, build, deploy)

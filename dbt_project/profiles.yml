@@ -8,8 +8,10 @@ vusion:
       threads: 4
 
     # ── Production: Databricks + Unity Catalog ──
-    # Credentials are injected via environment variables by the Databricks job.
-    # This profile is activated by: dbt run --target prod
+    # NOTE: When running as a Databricks dbt_task, this profile is IGNORED.
+    # Databricks auto-generates its own profile (target: databricks_cluster)
+    # using the warehouse_id from the task config. This prod target is only
+    # used for manual local runs: dbt run --target prod
     prod:
       type: databricks
       catalog: vusion_catalog

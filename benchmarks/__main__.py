@@ -3,35 +3,58 @@ Run benchmarks on Databricks.
 
 Entry points:
   - Databricks job: python_wheel_task with entry_point "vusion-benchmark"
-  - Databricks CLI: databricks bundle run vusion_dbt_pipeline --task run_benchmarks
+  - Databricks CLI: databricks bundle run vusion_benchmark
 """
 
 from __future__ import annotations
+
+import argparse
 
 from pyspark.sql import SparkSession
 
 from benchmarks.benchmark_queries import BENCHMARKS, run_benchmark
 
-# Databricks schema convention: profiles.yml schema + "_" + layer
-BRONZE = "retail_bronze"
-SILVER = "retail_silver"
-GOLD = "retail_gold"
+BRONZE = "bronze"
+SILVER = "silver"
+GOLD = "gold"
 
 
 def main() -> None:
     """Run all 4 benchmark queries and print results."""
+    parser = argparse.ArgumentParser(description="Run Vusion benchmark queries")
+    parser.add_argument(
+        "--catalog",
+        default="hive_metastore",
+        help="Unity Catalog name where dbt tables are written (default: hive_metastore)",
+    )
+    parser.add_argument(
+        "--iterations",
+        type=int,
+        default=3,
+        help="Number of timed iterations per query, median is reported (default: 3)",
+    )
+    args = parser.parse_args()
+
     spark = SparkSession.builder.getOrCreate()
+    spark.sql(f"USE CATALOG {args.catalog}")
 
     def execute(sql: str) -> list:
         return spark.sql(sql).collect()
 
     print(f"\n{'=' * 60}")
-    print("  Vusion Benchmark Results")
+    print(f"  Vusion Benchmark Results  (catalog: {args.catalog}, iterations: {args.iterations})")
+    print(f"  Schemas: {BRONZE} / {SILVER} / {GOLD}")
     print(f"{'=' * 60}\n")
 
     for name, query_template in BENCHMARKS:
         query = query_template.format(bronze=BRONZE, silver=SILVER, gold=GOLD)
-        result = run_benchmark(execute, name, query, explain_prefix="EXPLAIN EXTENDED")
+        result = run_benchmark(
+            execute,
+            name,
+            query,
+            explain_prefix="EXPLAIN EXTENDED",
+            iterations=args.iterations,
+        )
         print(
             f"  {result['name']}:\n"
             f"    Duration:      {result['median_ms']}ms (median),"

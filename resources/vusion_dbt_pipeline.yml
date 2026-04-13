@@ -27,7 +27,6 @@ resources:
         pause_status: UNPAUSED
 
       max_concurrent_runs: 1
-      timeout_seconds: 7200
 
       email_notifications:
         on_failure:
@@ -38,7 +37,7 @@ resources:
       job_clusters:
         - job_cluster_key: dbt_cli
           new_cluster:
-            spark_version: "14.3.x-scala2.12"
+            spark_version: "16.4.x-scala2.12"
             node_type_id: Standard_DS3_v2
             num_workers: 0
             spark_conf:
@@ -48,10 +47,8 @@ resources:
               ResourceClass: SingleNode
 
       # ── Tasks ──────────────────────────────────────────────────────────────
-      # Read location:  profiles.yml → catalog (vusion_catalog) + _sources.yml → schema (raw)
-      # Write location: profiles.yml → catalog + schema (retail) + dbt_project.yml → +schema (bronze/silver/gold)
-      # Storage vars (storage_container, storage_account) are NOT needed here —
-      # they are only used by the one-time create_external_tables macro.
+      # data_path is passed via --vars so read_source macro knows where to
+      # find the CSV files on Databricks (DBFS, Volumes, or Azure Blob).
       tasks:
         # 1. Build all dbt models (bronze → silver → gold)
         - task_key: dbt_run
@@ -61,12 +58,11 @@ resources:
             project_directory: ../dbt_project
             commands:
               - "dbt deps"
-              - "dbt run --target prod"
+              - "dbt run --vars '{\"data_path\": \"${var.data_path}\"}'"
             warehouse_id: ${var.warehouse_id}
           libraries:
             - pypi:
                 package: "dbt-databricks>=1.9.0,<2.0.0"
-          timeout_seconds: 3600
           max_retries: 2
           min_retry_interval_millis: 60000
           retry_on_timeout: true
@@ -80,12 +76,11 @@ resources:
           dbt_task:
             project_directory: ../dbt_project
             commands:
-              - "dbt test --target prod"
+              - "dbt test --vars '{\"data_path\": \"${var.data_path}\"}'"
             warehouse_id: ${var.warehouse_id}
           libraries:
             - pypi:
                 package: "dbt-databricks>=1.9.0,<2.0.0"
-          timeout_seconds: 1800
           max_retries: 1
           min_retry_interval_millis: 30000
           retry_on_timeout: false
@@ -99,12 +94,11 @@ resources:
           dbt_task:
             project_directory: ../dbt_project
             commands:
-              - "dbt docs generate --target prod"
+              - "dbt docs generate --vars '{\"data_path\": \"${var.data_path}\"}'"
             warehouse_id: ${var.warehouse_id}
           libraries:
             - pypi:
                 package: "dbt-databricks>=1.9.0,<2.0.0"
-          timeout_seconds: 900
           max_retries: 1
           min_retry_interval_millis: 30000
           retry_on_timeout: false
@@ -118,12 +112,11 @@ resources:
           dbt_task:
             project_directory: ../dbt_project
             commands:
-              - "dbt run-operation generate_optimization_statements --target prod"
+              - "dbt run-operation generate_optimization_statements"
             warehouse_id: ${var.warehouse_id}
           libraries:
             - pypi:
                 package: "dbt-databricks>=1.9.0,<2.0.0"
-          timeout_seconds: 1800
           max_retries: 1
           min_retry_interval_millis: 60000
           retry_on_timeout: true

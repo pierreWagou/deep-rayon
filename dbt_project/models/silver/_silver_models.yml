@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: customer_silver
+  - name: customer
     description: >
       Customer analytics table with RFM (Recency, Frequency, Monetary) scoring,
       segmentation, lifecycle status, and primary store preference.

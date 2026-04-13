@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: basket_analysis_per_store_gold
+  - name: basket_analysis_per_store
     description: >
       Store-level basket analysis KPIs: average size, item count, variance.
       Translated from PySpark gold_datamart_kpis.py.
@@ -44,7 +44,7 @@ models:
       - name: created_at
         description: Record creation timestamp
 
-  - name: product_trend_per_store_gold
+  - name: product_trend_per_store
     description: >
       Product sales trends per store with 30/60/90-day windows and trend indicators.
       Translated from PySpark gold_datamart_kpis.py.
@@ -91,7 +91,7 @@ models:
       - name: created_at
         description: Record creation timestamp
 
-  - name: nb_clients_per_store_gold
+  - name: nb_clients_per_store
     description: >
       Store-level client engagement metrics: unique clients, transaction volume, averages.
       Translated from PySpark gold_datamart_kpis.py.

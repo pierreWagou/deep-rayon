@@ -84,11 +84,8 @@ description = "Validate Databricks bundle (dev target)"
 run = "databricks bundle validate --target dev"
 
 [tasks."bundle:deploy"]
-description = "Build wheel and deploy Databricks bundle (dev target)"
-run = """
-uv build --wheel
-databricks bundle deploy --target dev
-"""
+description = "Deploy Databricks bundle (dev target) — wheel is rebuilt automatically"
+run = "databricks bundle deploy --target dev"
 
 [tasks."bundle:destroy"]
 description = "Destroy Databricks bundle (dev target)"
