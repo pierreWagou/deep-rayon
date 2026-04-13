@@ -89,8 +89,12 @@ jobs:
       - run: uvx --with mkdocs-material mkdocs build --strict
 
   # ── Databricks: validate bundle ────────────────────────────────────────────
+  # Skipped until DATABRICKS_HOST is set to a real workspace URL.
+  # To enable: replace 'none' with your workspace URL in the 'databricks' environment.
   databricks:
+    if: vars.DATABRICKS_HOST != 'none'
     runs-on: ubuntu-latest
+    environment: databricks
     steps:
       - uses: actions/checkout@v5
       - name: Install Databricks CLI

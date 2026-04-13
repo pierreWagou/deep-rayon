@@ -43,8 +43,12 @@ jobs:
         uses: actions/deploy-pages@v4
 
   # ── Databricks: validate + deploy bundle to production ─────────────────────
+  # Skipped until DATABRICKS_HOST is set to a real workspace URL.
+  # To enable: replace 'none' with your workspace URL in the 'databricks' environment.
   databricks-validate:
+    if: vars.DATABRICKS_HOST != 'none'
     runs-on: ubuntu-latest
+    environment: databricks
     steps:
       - uses: actions/checkout@v5
       - name: Install Databricks CLI
@@ -57,12 +61,16 @@ jobs:
 
   databricks-deploy:
     needs: databricks-validate
+    if: vars.DATABRICKS_HOST != 'none'
     runs-on: ubuntu-latest
-    environment: production
+    environment: databricks
     steps:
       - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v6
       - name: Install Databricks CLI
         uses: databricks/setup-cli@main
+      - name: Build wheel
+        run: uv build --wheel
       - name: Deploy bundle to production
         env:
           DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
