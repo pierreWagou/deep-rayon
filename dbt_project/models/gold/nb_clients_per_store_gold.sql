@@ -1,6 +1,6 @@
--- gold/nb_clients_per_store.sql
+-- gold/nb_clients_per_store_gold.sql
 -- Gold layer: Client count and engagement metrics per store
--- Translated from: DataEngineeringTest/pipeline/gold_datamart_kpis.py (lines 287-322)
+-- Translated from: reference/pipeline/gold_datamart_kpis.py (lines 287-322)
 --
 -- Computes per-store metrics:
 --   - Number of distinct clients
@@ -10,11 +10,11 @@
 --   - Store metadata
 
 with transactions as (
-    select * from {{ ref('stg_transactions') }}
+    select * from {{ ref('transactions_bronze') }}
 ),
 
 stores as (
-    select * from {{ ref('stg_stores') }}
+    select * from {{ ref('stores_bronze') }}
 ),
 
 -- Aggregate by store

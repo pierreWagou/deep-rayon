@@ -1,6 +1,6 @@
--- gold/basket_analysis_per_store.sql
+-- gold/basket_analysis_per_store_gold.sql
 -- Gold layer: Basket analysis KPIs aggregated by store
--- Translated from: DataEngineeringTest/pipeline/gold_datamart_kpis.py (lines 152-202)
+-- Translated from: reference/pipeline/gold_datamart_kpis.py (lines 152-202)
 --
 -- Computes per-store metrics:
 --   - Average, min, max, stddev basket size
@@ -9,11 +9,11 @@
 --   - Store metadata (type, location, hours)
 
 with transactions as (
-    select * from {{ ref('stg_transactions') }}
+    select * from {{ ref('transactions_bronze') }}
 ),
 
 stores as (
-    select * from {{ ref('stg_stores') }}
+    select * from {{ ref('stores_bronze') }}
 ),
 
 -- Per-basket aggregation: group by store + transaction
@@ -37,8 +37,7 @@ store_metrics as (
         round(stddev_samp(basket_size), 2)          as stddev_basket_size,
         min(basket_size)                            as min_basket_size,
         max(basket_size)                            as max_basket_size,
-        count(*)                                    as total_transactions,
-        round(avg(basket_item_count), 2)            as avg_unique_items_per_basket
+        count(*)                                    as total_transactions
     from baskets
     group by store_id
 ),
@@ -53,7 +52,6 @@ final as (
         sm.min_basket_size,
         sm.max_basket_size,
         sm.total_transactions,
-        sm.avg_unique_items_per_basket,
         s.store_type,
         s.latitude,
         s.longitude,

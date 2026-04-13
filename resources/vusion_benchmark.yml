@@ -1,0 +1,52 @@
+# Vusion Benchmark — Job Definition
+#
+# Runs 4 JOIN-heavy queries against the dbt-built tables and measures
+# duration, files scanned, and estimated cost. Deployed as a Python wheel.
+#
+# Trigger manually after the dbt pipeline completes:
+#   databricks bundle run vusion_benchmark
+
+resources:
+  jobs:
+    vusion_benchmark:
+      name: vusion_benchmark
+      description: >
+        Run benchmark queries against the Vusion data platform.
+        Measures query duration, files scanned, and estimated cost
+        for 4 JOIN-heavy analytical queries.
+
+      tags:
+        project: vusion
+        team: data-engineering
+
+      # No schedule — triggered manually or by CI after the dbt pipeline
+      max_concurrent_runs: 1
+      timeout_seconds: 600
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+
+      job_clusters:
+        - job_cluster_key: benchmark
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*, 4]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags:
+              ResourceClass: SingleNode
+
+      tasks:
+        - task_key: run_benchmarks
+          description: Run 4 JOIN-heavy benchmark queries and measure performance
+          job_cluster_key: benchmark
+          python_wheel_task:
+            package_name: vusion
+            entry_point: vusion-benchmark
+          libraries:
+            - whl: ../dist/*.whl
+          timeout_seconds: 600
+          max_retries: 0

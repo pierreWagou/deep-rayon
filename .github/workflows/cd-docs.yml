@@ -8,7 +8,7 @@ on:
 
 # Only one deployment at a time
 concurrency:
-  group: pages
+  group: cd
   cancel-in-progress: false
 
 # Grant GITHUB_TOKEN permissions for Pages deployment
@@ -18,7 +18,8 @@ permissions:
   id-token: write
 
 jobs:
-  build:
+  # ── Documentation: build + deploy to GitHub Pages ──────────────────────────
+  docs-build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -30,8 +31,8 @@ jobs:
         with:
           path: site
 
-  deploy:
-    needs: build
+  docs-deploy:
+    needs: docs-build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -40,3 +41,32 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+
+  # ── Databricks: validate + deploy bundle to production ─────────────────────
+  databricks-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Validate bundle
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+        run: databricks bundle validate --target prod
+
+  databricks-deploy:
+    needs: databricks-validate
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Databricks CLI
+        uses: databricks/setup-cli@main
+      - name: Deploy bundle to production
+        env:
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}
+          DATABRICKS_PROD_WAREHOUSE_ID: ${{ vars.DATABRICKS_PROD_WAREHOUSE_ID }}
+          DATABRICKS_SP_NAME: ${{ vars.DATABRICKS_SP_NAME }}
+        run: databricks bundle deploy --target prod

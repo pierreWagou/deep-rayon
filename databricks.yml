@@ -1,0 +1,46 @@
+# Vusion dbt Pipeline — Databricks Asset Bundle
+#
+# Deploy with:
+#   databricks bundle validate --target dev
+#   databricks bundle deploy --target dev
+#   databricks bundle deploy --target prod
+#
+# See: https://docs.databricks.com/dev-tools/bundles/index.html
+
+bundle:
+  name: vusion-dbt-pipeline
+
+include:
+  - resources/*.yml
+
+variables:
+  warehouse_id:
+    description: SQL warehouse ID for dbt and SQL tasks
+  notification_email:
+    description: Email for job failure notifications
+    default: data-engineering@vusion.com
+
+targets:
+  # ── Development ────────────────────────────────────────────────────────────
+  # Uses the "test" profile from ~/.databrickscfg for auth.
+  # Each developer gets their own prefixed copy: [dev username] vusion_dbt_pipeline
+  # Schedules are automatically paused in development mode.
+  dev:
+    mode: development
+    default: true
+    workspace:
+      profile: test
+
+  # ── Production ─────────────────────────────────────────────────────────────
+  # Auth via env vars (DATABRICKS_HOST + DATABRICKS_TOKEN) set by CI/CD.
+  # Single shared deployment under /Shared/.bundle/prod/
+  # Runs on schedule. Deployed by CI/CD only.
+  prod:
+    mode: production
+    workspace:
+      host: ${DATABRICKS_HOST}
+      root_path: /Shared/.bundle/prod/${bundle.name}
+    run_as:
+      service_principal_name: ${DATABRICKS_SP_NAME}
+    variables:
+      warehouse_id: ${DATABRICKS_PROD_WAREHOUSE_ID}

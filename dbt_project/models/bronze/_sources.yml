@@ -4,11 +4,12 @@ sources:
   - name: raw
     description: >
       Raw CSV files simulating hourly Azure Blob Storage drops.
-      In production, these would be external tables reading from
-      Azure Blob Storage via ABFSS paths.
+      In production, these are external tables in Unity Catalog reading
+      from Azure Blob Storage via ABFSS paths. Locally, the bronze models
+      use DuckDB's read_csv() via the read_source macro.
+    schema: raw
     meta:
       owner: data-engineering
-      production_location: "abfss://raw@vusiondata.dfs.core.windows.net/"
     tables:
       - name: clients
         description: Client/customer master data with fidelity card information

@@ -1,0 +1,26 @@
+---
+extends: default
+
+ignore:
+  - .venv/
+  - dbt_project/target/
+  - dbt_project/dbt_packages/
+  - dbt_project/logs/
+  - site/
+
+rules:
+  # Allow long lines (SQL in YAML, URLs, etc.)
+  line-length:
+    max: 200
+  # Allow truthy values without explicit boolean (on, yes, etc.)
+  truthy:
+    check-keys: false
+  # dbt YAML files use heavy nesting
+  indentation:
+    spaces: 2
+  # mkdocs.yml uses !!python/name tags
+  comments:
+    require-starting-space: true
+    min-spaces-from-content: 1
+  comments-indentation: disable
+  document-start: disable

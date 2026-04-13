@@ -28,11 +28,11 @@
     │ Table                             │ Z-ORDER columns                         │ Partitioning                 │
     ├───────────────────────────────────┼─────────────────────────────────────────┼──────────────────────────────┤
     │ customer_silver                   │ client_id, rfm_segment, customer_status │ None (500K rows)             │
-    │ basket_analysis_per_store         │ store_id, store_type                    │ None (aggregated, small)     │
-    │ product_trend_per_store           │ store_id, product_id, trend_direction   │ None (aggregated)            │
-    │ nb_clients_per_store              │ store_id, store_type                    │ None (aggregated, small)     │
+    │ basket_analysis_per_store_gold    │ store_id, store_type                    │ None (aggregated, small)     │
+    │ product_trend_per_store_gold     │ store_id, product_id, trend_direction   │ None (aggregated)            │
+    │ nb_clients_per_store_gold        │ store_id, store_type                    │ None (aggregated, small)     │
     ├───────────────────────────────────┼─────────────────────────────────────────┼──────────────────────────────┤
-    │ stg_transactions (if materialized)│ transaction_date, client_id, store_id   │ PARTITION BY (transaction_date)│
+    │ transactions_bronze (if materialized)│ transaction_date, client_id, store_id   │ PARTITION BY (transaction_date)│
     └───────────────────────────────────┴─────────────────────────────────────────┴──────────────────────────────┘
 
     Rationale:
@@ -54,13 +54,13 @@
     ZORDER BY (client_id, rfm_segment, customer_status);
 
     -- Gold layer
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.basket_analysis_per_store
+    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.basket_analysis_per_store_gold
     ZORDER BY (store_id, store_type);
 
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.product_trend_per_store
+    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.product_trend_per_store_gold
     ZORDER BY (store_id, product_id, trend_direction);
 
-    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.nb_clients_per_store
+    OPTIMIZE {{ target.catalog }}.{{ target.schema }}_gold.nb_clients_per_store_gold
     ZORDER BY (store_id, store_type);
 {% endif %}
 {% endmacro %}

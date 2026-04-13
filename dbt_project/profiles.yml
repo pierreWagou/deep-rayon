@@ -4,15 +4,17 @@ vusion:
     # ── Local development: DuckDB ──
     dev:
       type: duckdb
-      path: "target/vusion.duckdb"
+      path: "dbt_project/target/vusion.duckdb"
       threads: 4
 
     # ── Production: Databricks + Unity Catalog ──
-    # prod:
-    #   type: databricks
-    #   catalog: vusion_catalog
-    #   schema: retail
-    #   host: "{{ env_var('DATABRICKS_HOST') }}"
-    #   http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
-    #   token: "{{ env_var('DATABRICKS_TOKEN') }}"
-    #   threads: 4
+    # Credentials are injected via environment variables by the Databricks job.
+    # This profile is activated by: dbt run --target prod
+    prod:
+      type: databricks
+      catalog: vusion_catalog
+      schema: retail
+      host: "{{ env_var('DATABRICKS_HOST') }}"
+      http_path: "{{ env_var('DATABRICKS_HTTP_PATH') }}"
+      token: "{{ env_var('DATABRICKS_TOKEN') }}"
+      threads: 4

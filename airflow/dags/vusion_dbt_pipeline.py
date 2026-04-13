@@ -15,11 +15,11 @@ Local dev: Can be tested with `airflow dags test vusion_dbt_pipeline`.
 from __future__ import annotations
 
 import pendulum
-from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
-from airflow.providers.databricks.sensors.databricks import DatabricksPartitionSensor
 from airflow.utils.task_group import TaskGroup
+
+from airflow import DAG
 
 # ── DAG configuration ──────────────────────────────────────────────────────────
 
@@ -40,19 +40,18 @@ default_args = {
 # ── Notification callback ──────────────────────────────────────────────────────
 
 
-def send_notification(context, status="success"):
+def send_notification(status="success", **context):
     """Send pipeline completion notification (placeholder for Slack/Teams)."""
     dag_run = context.get("dag_run")
     task_instance = context.get("task_instance")
-    print(
-        f"[{status.upper()}] DAG: {dag_run.dag_id} | "
-        f"Task: {task_instance.task_id if task_instance else 'N/A'} | "
-        f"Execution: {dag_run.execution_date}"
-    )
+    dag_id = dag_run.dag_id if dag_run else "unknown"
+    execution = dag_run.logical_date if dag_run else "unknown"
+    task_id = task_instance.task_id if task_instance else "N/A"
+    print(f"[{status.upper()}] DAG: {dag_id} | Task: {task_id} | Execution: {execution}")
 
 
 def on_failure_callback(context):
-    send_notification(context, status="failure")
+    send_notification(status="failure", **context)
 
 
 # ── DAG definition ─────────────────────────────────────────────────────────────

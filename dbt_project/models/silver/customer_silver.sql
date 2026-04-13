@@ -1,6 +1,6 @@
 -- silver/customer_silver.sql
 -- Silver layer: Customer analytics with RFM scoring and segmentation
--- Translated from: DataEngineeringTest/pipeline/silver_customer_layer.py
+-- Translated from: reference/pipeline/silver_customer_layer.py
 --
 -- This model computes:
 --   1. RFM metrics (Recency, Frequency, Monetary)
@@ -10,15 +10,15 @@
 --   5. Primary store preference and loyalty score
 
 with transactions as (
-    select * from {{ ref('stg_transactions') }}
+    select * from {{ ref('transactions_bronze') }}
 ),
 
 clients as (
-    select * from {{ ref('stg_clients') }}
+    select * from {{ ref('clients_bronze') }}
 ),
 
 stores as (
-    select * from {{ ref('stg_stores') }}
+    select * from {{ ref('stores_bronze') }}
 ),
 
 -- Step 1: RFM Metrics
@@ -27,11 +27,10 @@ rfm_metrics as (
         client_id,
         datediff('day', max(transaction_date), current_date)   as recency_days,
         count(distinct transaction_id)                          as frequency,
-        sum(quantity)                                           as monetary_value,
+        sum(spend)                                              as monetary_value,
         min(transaction_date)                                   as first_purchase_date,
         max(transaction_date)                                   as last_purchase_date,
-        round(avg(quantity), 2)                                 as avg_quantity_per_transaction,
-        count(distinct transaction_id)                          as total_transactions
+        round(avg(quantity), 2)                                 as avg_quantity_per_transaction
     from transactions
     group by client_id
 ),
@@ -56,12 +55,12 @@ rfm_scored as (
             when frequency >= 2  then 2
             else 1
         end as frequency_score,
-        -- Monetary score: higher monetary = higher score
+        -- Monetary score: higher spend = higher score
         case
-            when monetary_value >= 100 then 5
-            when monetary_value >= 50  then 4
-            when monetary_value >= 20  then 3
-            when monetary_value >= 5   then 2
+            when monetary_value >= 200 then 5
+            when monetary_value >= 130 then 4
+            when monetary_value >= 80  then 3
+            when monetary_value >= 40  then 2
             else 1
         end as monetary_score
     from rfm_metrics
@@ -171,7 +170,7 @@ final as (
         ps.primary_store_type,
         ps.primary_store_transaction_count,
         ps.store_loyalty_score,
-        cs.total_transactions,
+        cs.frequency                          as total_transactions,
         current_timestamp                     as created_at,
         current_timestamp                     as updated_at
     from customer_status cs

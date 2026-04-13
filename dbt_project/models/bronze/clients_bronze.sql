@@ -1,13 +1,9 @@
--- staging/stg_clients.sql
--- Bronze layer: 1:1 with source clients CSV
+-- bronze/clients_bronze.sql
+-- Bronze layer: 1:1 with source clients CSV (no PySpark equivalent — new staging logic)
 -- Handles: missing account_id column, type casting, deduplication
 
 with source as (
-    select * from read_csv(
-        '{{ var("data_path") }}/clients_500k.csv',
-        header = true,
-        auto_detect = true
-    )
+    select * from {{ read_source('raw', 'clients', 'clients_500k.csv') }}
 ),
 
 cleaned as (

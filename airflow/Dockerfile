@@ -1,13 +1,11 @@
 FROM apache/airflow:2.10.5-python3.12
 
-# Install uv for dependency isolation
-COPY --from=ghcr.io/astral-sh/uv:0.7.8 /uv /uvx /usr/local/bin/
+# Silence SyntaxWarnings from bundled provider packages (azure, etc.)
+ENV PYTHONWARNINGS="ignore::SyntaxWarning"
 
-# Copy dbt project into the image
-COPY dbt_project/ /opt/airflow/dbt_project/
+# Pin the Databricks provider to a version compatible with Airflow 2.10.x.
+# Provider 7.x requires Airflow >= 2.11 and would break the base image.
+RUN pip install --no-cache-dir 'apache-airflow-providers-databricks==6.13.0'
 
-# Pre-sync dbt dependencies so DAG tasks start fast
-RUN uv sync --project /opt/airflow/dbt_project --no-install-project --quiet
-
-# Install the Databricks provider for Airflow
-RUN pip install --no-cache-dir apache-airflow-providers-databricks
+# The mock plugin (plugins/mock_databricks.py) overrides operator execution
+# at runtime so tasks succeed without a real Databricks workspace.

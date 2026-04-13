@@ -1,0 +1,129 @@
+# Vusion dbt Pipeline — Job Definition
+#
+# The instructions suggest referencing a Databricks notebook for dbt execution.
+# We use Databricks-native dbt_task instead — it provides built-in dbt CLI
+# support without maintaining a separate notebook, and handles deps, logging,
+# and warehouse routing natively. This is the recommended approach since
+# Databricks 2023.2+ (see: docs.databricks.com/en/jobs/dbt.html).
+#
+# dbt CLI runs on a single-node job cluster; queries execute on the SQL warehouse.
+# This job runs daily: dbt run → test → docs generate → optimize Delta tables.
+
+resources:
+  jobs:
+    vusion_dbt_pipeline:
+      name: vusion_dbt_pipeline
+      description: >
+        Vusion dbt transformation pipeline: build models, test data quality,
+        generate documentation, and optimize Delta tables.
+
+      tags:
+        project: vusion
+        team: data-engineering
+
+      schedule:
+        quartz_cron_expression: "0 0 3 * * ?"
+        timezone_id: Europe/Paris
+        pause_status: UNPAUSED
+
+      max_concurrent_runs: 1
+      timeout_seconds: 7200
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+
+      # ── Job cluster for dbt CLI (single-node, ephemeral) ───────────────────
+      # dbt itself is lightweight — the actual queries run on the SQL warehouse.
+      job_clusters:
+        - job_cluster_key: dbt_cli
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*, 4]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags:
+              ResourceClass: SingleNode
+
+      # ── Tasks ──────────────────────────────────────────────────────────────
+      # Read location:  profiles.yml → catalog (vusion_catalog) + _sources.yml → schema (raw)
+      # Write location: profiles.yml → catalog + schema (retail) + dbt_project.yml → +schema (bronze/silver/gold)
+      # Storage vars (storage_container, storage_account) are NOT needed here —
+      # they are only used by the one-time create_external_tables macro.
+      tasks:
+        # 1. Build all dbt models (bronze → silver → gold)
+        - task_key: dbt_run
+          description: Execute dbt models (bronze → silver → gold)
+          job_cluster_key: dbt_cli
+          dbt_task:
+            project_directory: ../dbt_project
+            commands:
+              - "dbt deps"
+              - "dbt run --target prod"
+            warehouse_id: ${var.warehouse_id}
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.9.0,<2.0.0"
+          timeout_seconds: 3600
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true
+
+        # 2. Run data quality tests
+        - task_key: dbt_test
+          description: Run dbt data quality tests (schema + custom)
+          depends_on:
+            - task_key: dbt_run
+          job_cluster_key: dbt_cli
+          dbt_task:
+            project_directory: ../dbt_project
+            commands:
+              - "dbt test --target prod"
+            warehouse_id: ${var.warehouse_id}
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.9.0,<2.0.0"
+          timeout_seconds: 1800
+          max_retries: 1
+          min_retry_interval_millis: 30000
+          retry_on_timeout: false
+
+        # 3. Generate dbt documentation catalog
+        - task_key: dbt_docs_generate
+          description: Generate dbt documentation catalog
+          depends_on:
+            - task_key: dbt_test
+          job_cluster_key: dbt_cli
+          dbt_task:
+            project_directory: ../dbt_project
+            commands:
+              - "dbt docs generate --target prod"
+            warehouse_id: ${var.warehouse_id}
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.9.0,<2.0.0"
+          timeout_seconds: 900
+          max_retries: 1
+          min_retry_interval_millis: 30000
+          retry_on_timeout: false
+
+        # 4. Optimize Delta tables (OPTIMIZE + Z-ORDER)
+        - task_key: optimize_tables
+          description: Run OPTIMIZE + Z-ORDER on Delta tables for query performance
+          depends_on:
+            - task_key: dbt_docs_generate
+          job_cluster_key: dbt_cli
+          dbt_task:
+            project_directory: ../dbt_project
+            commands:
+              - "dbt run-operation generate_optimization_statements --target prod"
+            warehouse_id: ${var.warehouse_id}
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.9.0,<2.0.0"
+          timeout_seconds: 1800
+          max_retries: 1
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true

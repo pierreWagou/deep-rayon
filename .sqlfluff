@@ -1,0 +1,40 @@
+[sqlfluff]
+dialect = duckdb
+templater = dbt
+max_line_length = 120
+# Exclude rules that conflict with the existing code style:
+#   LT01: aligned column aliases use intentional multi-space padding
+#   LT02: compact inline CASE statements are intentional
+#   AL01: implicit table aliases (t, s, p) are idiomatic in dbt
+#   RF04: "name" is used as a column identifier (reserved keyword)
+#   ST02: explicit CASE preferred over COALESCE for clarity
+#   ST06: column ordering is intentional (context-first, not wildcards-first)
+exclude_rules = LT01, LT02, AL01, RF04, ST02, ST06
+
+# Match the existing code style
+[sqlfluff:indentation]
+indent_unit = space
+tab_space_size = 4
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.types]
+capitalisation_policy = lower
+
+# Allow star in final select (common dbt pattern: select * from final)
+[sqlfluff:rules:structure.using]
+enabled = false
+
+[sqlfluff:templater:dbt]
+project_dir = dbt_project
+profiles_dir = dbt_project

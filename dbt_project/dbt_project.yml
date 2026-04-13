@@ -6,17 +6,15 @@ config-version: 2
 model-paths: ["models"]
 test-paths: ["tests"]
 macro-paths: ["macros"]
-seed-paths: ["seeds"]
-analysis-paths: ["analyses"]
 target-path: "target"
 clean-targets: ["target", "dbt_packages"]
 
 # ── Model configuration ──
 models:
   vusion:
-    staging:
+    bronze:
       +materialized: view
-      +schema: staging
+      +schema: bronze
     silver:
       +materialized: table
       +schema: silver
@@ -26,5 +24,5 @@ models:
 
 # ── Vars for cross-adapter compatibility ──
 vars:
-  # Path to source CSV files (local dev)
-  data_path: "../data"
+  # Path to source CSV files (local dev only, ignored on Databricks)
+  data_path: "data"

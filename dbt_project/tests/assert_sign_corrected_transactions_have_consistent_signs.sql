@@ -7,7 +7,7 @@ select
     quantity,
     spend,
     is_sign_corrected
-from {{ ref('stg_transactions') }}
+from {{ ref('transactions_bronze') }}
 where
     sign(quantity) != sign(spend)
     and quantity != 0

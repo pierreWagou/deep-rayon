@@ -47,13 +47,13 @@ theme:
 extra_css:
   - assets/extra.css
 
-# Navigation — symlinked READMEs in docs/
+# Navigation
 nav:
   - Home: index.md
   - dbt Project: dbt.md
   - Orchestration:
-    - Airflow: airflow.md
-    - Databricks: databricks.md
+      - Airflow: airflow.md
+      - Databricks: databricks.md
   - Benchmarks: benchmarks.md
 
 # Markdown extensions for rich content

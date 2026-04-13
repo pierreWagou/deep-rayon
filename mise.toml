@@ -12,14 +12,16 @@ mprocs = "latest"
 [env]
 # Pin uv to use mise-managed Python (prevents uv from picking up its own 3.14)
 UV_PYTHON = "3.12"
+# Load .env for local secrets (warehouse IDs, etc.) — gitignored
+_.file = ".env"
 
 # ── Tasks ──
 
 [tasks.setup]
-description = "Bootstrap the project (dbt deps + pre-commit hooks)"
+description = "Bootstrap the project (deps + pre-commit hooks)"
 run = """
-echo "Installing dbt project dependencies..."
-uv sync --project dbt_project --no-install-project --quiet
+echo "Installing project dependencies..."
+uv sync --python 3.12 --no-install-project --quiet
 
 echo "Installing pre-commit hooks..."
 uvx pre-commit install
@@ -28,33 +30,66 @@ echo ""
 echo "Done! Run 'mise run dbt' to build all models."
 """
 
+[tasks.dev]
+description = "Bootstrap deps, build dbt, start all services"
+depends = ["setup", "dbt"]
+raw = true
+run = "mprocs; docker compose -f airflow/docker-compose.yml down"
+
 [tasks.check]
 description = "Run all linters, type checkers, and tests (full CI-equivalent check)"
 run = "uvx pre-commit run --all-files"
 
 [tasks.dbt]
 description = "Run dbt build (models + tests) against DuckDB"
-run = "cd dbt_project && uv run dbt build --profiles-dir ."
+run = "uv run dbt build --project-dir dbt_project --profiles-dir dbt_project"
 
 [tasks."dbt:run"]
 description = "Run dbt models only"
-run = "cd dbt_project && uv run dbt run --profiles-dir ."
+run = "uv run dbt run --project-dir dbt_project --profiles-dir dbt_project"
 
 [tasks."dbt:test"]
 description = "Run dbt tests only"
-run = "cd dbt_project && uv run dbt test --profiles-dir ."
+run = "uv run dbt test --project-dir dbt_project --profiles-dir dbt_project"
 
 [tasks."dbt:docs"]
 description = "Generate and serve dbt documentation"
 run = """
-cd dbt_project && uv run dbt docs generate --profiles-dir .
-cd dbt_project && uv run dbt docs serve --profiles-dir . --port 8200
+uv run dbt docs generate --project-dir dbt_project --profiles-dir dbt_project
+uv run dbt docs serve --project-dir dbt_project --profiles-dir dbt_project --port 8200
 """
 
 [tasks.docs]
 description = "Serve MkDocs documentation site"
 run = "uvx --with mkdocs-material mkdocs serve --dev-addr 127.0.0.1:8100"
 
-[tasks.benchmark]
-description = "Run benchmark queries against DuckDB"
-run = "cd dbt_project && uv run pytest ../benchmarks/ -v"
+[tasks.test]
+description = "Run Python unit tests"
+run = "uv run pytest tests/ -v"
+
+[tasks.build]
+description = "Build Python wheel for Databricks deployment"
+run = "uv build --wheel"
+
+[tasks.airflow]
+description = "Start local Airflow (Docker Compose) on http://localhost:8080"
+run = "docker compose -f airflow/docker-compose.yml up --build"
+
+[tasks."airflow:down"]
+description = "Stop local Airflow"
+run = "docker compose -f airflow/docker-compose.yml down"
+
+[tasks."bundle:validate"]
+description = "Validate Databricks bundle (dev target)"
+run = "databricks bundle validate --target dev"
+
+[tasks."bundle:deploy"]
+description = "Build wheel and deploy Databricks bundle (dev target)"
+run = """
+uv build --wheel
+databricks bundle deploy --target dev
+"""
+
+[tasks."bundle:destroy"]
+description = "Destroy Databricks bundle (dev target)"
+run = "databricks bundle destroy --target dev"

@@ -1,6 +1,9 @@
 target-version = "py312"
 line-length = 100
 
+# Reference files are read-only originals from the DataEngineeringTest repo
+exclude = ["reference/"]
+
 
 [lint]
 select = [

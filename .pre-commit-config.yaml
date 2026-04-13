@@ -7,22 +7,49 @@ repos:
       - id: ruff-check
         args: [--fix]
 
+  # ── Python: type checking ──
+  - repo: local
+    hooks:
+      - id: ty
+        name: ty (type check)
+        entry: bash -c 'uvx ty check'
+        language: system
+        files: '\.py$'
+        pass_filenames: false
+
+  # ── YAML: lint ──
+  - repo: https://github.com/adrienverge/yamllint
+    rev: v1.37.1
+    hooks:
+      - id: yamllint
+        args: [-c, .yamllint.yml]
+
+  # ── SQL: lint ──
+  - repo: local
+    hooks:
+      - id: sqlfluff-lint
+        name: sqlfluff lint (dbt models)
+        entry: bash -c 'uv run sqlfluff lint dbt_project/models/ dbt_project/tests/ --ignore parsing'
+        language: system
+        files: ^dbt_project/.*\.sql$
+        pass_filenames: false
+
+  # ── Python: unit tests ──
+  - repo: local
+    hooks:
+      - id: pytest-unit
+        name: pytest (unit tests)
+        entry: bash -c 'uv run pytest tests/ -q'
+        language: system
+        files: ^tests/
+        pass_filenames: false
+
   # ── dbt: build + test ──
   - repo: local
     hooks:
       - id: dbt-build
         name: dbt build (DuckDB)
-        entry: bash -c 'cd dbt_project && uv run dbt build --profiles-dir .'
+        entry: bash -c 'uv run dbt build --project-dir dbt_project --profiles-dir dbt_project'
         language: system
         files: ^dbt_project/
-        pass_filenames: false
-
-  # ── Python: benchmarks test ──
-  - repo: local
-    hooks:
-      - id: pytest-benchmarks
-        name: pytest (benchmarks)
-        entry: bash -c 'cd dbt_project && uv run dbt build --profiles-dir . && cd .. && uv run --project dbt_project pytest benchmarks/ -q'
-        language: system
-        files: ^benchmarks/
         pass_filenames: false

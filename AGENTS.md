@@ -1,19 +1,18 @@
 # Vusion — Agent Instructions
 
-Read the README.md files in each sub-project for detailed context.
-
 ## Dev Environment
 
 Tool versions and tasks are managed by [mise](https://mise.jdx.dev/) via `mise.toml`:
 
 - **Tools:** Python 3.12, uv, mprocs (auto-installed with `mise install`)
-- **Bootstrap:** `mise run setup` (syncs all sub-project deps + pre-commit hooks)
-- **Full CI check:** `mise run check` — runs pre-commit (ruff, dbt build, pytest)
+- **Bootstrap:** `mise run setup` (syncs deps + pre-commit hooks)
+- **Full CI check:** `mise run check` — runs pre-commit (ruff, ty, yamllint, sqlfluff, pytest, dbt build, benchmarks)
 - **Run dbt:** `mise run dbt` (build all models in DuckDB)
+- **Start all services:** `mise run dev` (docs + dbt-docs + Airflow via mprocs)
 - **Serve docs:** `mise run docs` (MkDocs Material on localhost:8100)
 
-The dbt sub-project has its own `.venv`, `uv.lock`, `pyproject.toml`.
-No root venv — dev tools run via `uvx`.
+Python dependencies are managed in the root `pyproject.toml` with a single `.venv`.
+Dev tools that don't need the venv run via `uvx` (ruff, ty, yamllint, mkdocs).
 
 ## You are a Senior Data Engineer
 
@@ -43,7 +42,7 @@ in-store analytics for large retail clients across the world.
 
 ## Design Principles
 
-- **Medallion architecture** — Bronze (staging) → Silver (business logic) → Gold (KPIs)
+- **Medallion architecture** — Bronze → Silver (business logic) → Gold (KPIs)
 - **dbt-first** — all transformations as SQL models; PySpark is reference only
 - **Data quality as code** — dbt tests for schema validation, business rules, anomaly detection
 - **Dependency isolation** — Airflow stays clean; dbt runs in its own env
@@ -62,13 +61,19 @@ in-store analytics for large retail clients across the world.
 
 ```
 vusion/
-├── data/                   # Source CSV files (simulating Azure Blob Storage)
 ├── dbt_project/            # dbt models, tests, macros, schema docs
-├── airflow/                # Airflow DAGs for Databricks job orchestration
-├── databricks/             # Databricks job configuration (JSON)
-├── benchmarks/             # Query performance benchmarks
-├── docs/                   # MkDocs content (symlinks to sub-project READMEs)
-
+├── airflow/                # Airflow DAG + Docker Compose for local dev
+├── reference/              # Original PySpark pipeline + test instructions (read-only)
+├── databricks.yml          # Databricks Asset Bundle config
+├── resources/              # Bundle job definition (YAML)
+├── benchmarks/             # Query performance benchmarks (pytest + Databricks wheel)
+├── tests/                  # Python unit tests
+├── data/                   # Source CSV files (simulating Azure Blob Storage)
+├── docs/                   # MkDocs content (standalone pages)
+├── .github/                # CI/CD workflows (lint, test, build, deploy)
+├── pyproject.toml          # Python deps (dbt, duckdb, pytest, sqlfluff)
+├── mise.toml               # Tool versions + task runner
+└── mkdocs.yml              # Documentation site config
 ```
 
 ## Data Sources
@@ -76,18 +81,18 @@ vusion/
 Four CSV files in `data/` simulating hourly Azure Blob Storage drops:
 
 - **clients_500k.csv** — Client ID, name, job, email, fidelity card number
-- **stores_500k.csv** — Store ID, GPS coordinates, hours, type
+- **stores_500k.csv** — Store ID, GPS coordinates, latitude, longitude, hours, type
 - **products_500k.csv** — Product ID, EAN, brand, description
 - **transactions_500k.csv** — Transaction ID, client, date/time, product, quantity, spend, store
 
 ## Deliverables
 
-1. **dbt project** — staging, silver, gold models with full schema docs and tests
+1. **dbt project** — bronze, silver, gold models with full schema docs and tests
 2. **Data quality tests** — handling missing columns, sign inconsistencies, type mismatches, date formats, brand changes, store type inconsistencies
-3. **Unit tests** — for transformation logic correctness
+3. **Unit tests** — for transformation logic correctness (dbt + Python)
 4. **Table optimization policy** — Z-ORDER, OPTIMIZE, partitioning recommendations
-5. **Benchmark queries** — 3+ JOIN-heavy queries with performance measurement
-6. **Databricks job config** — JSON with dbt_run, dbt_test, dbt_docs_generate, optimize_tables
-7. **Airflow DAG** — orchestrating Databricks jobs with error handling
-8. **Documentation** — MkDocs site + README with optimization summary
-9. **CI/CD** — GitHub Actions for lint, test, build, docs deployment
+5. **Benchmark queries** — 4 JOIN-heavy queries with performance measurement
+6. **Databricks Asset Bundle** — YAML config with dev/prod targets for CI/CD deployment
+7. **Airflow DAG** — orchestrating Databricks jobs with error handling + local dev via Docker Compose
+8. **Documentation** — MkDocs site with dbt, Airflow, Databricks, and benchmark docs
+9. **CI/CD** — GitHub Actions for lint (ruff, ty, yamllint, sqlfluff), test, build, docs + Databricks deployment

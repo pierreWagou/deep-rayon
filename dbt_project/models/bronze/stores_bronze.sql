@@ -1,13 +1,9 @@
--- staging/stg_stores.sql
--- Bronze layer: 1:1 with source stores CSV
+-- bronze/stores_bronze.sql
+-- Bronze layer: 1:1 with source stores CSV (no PySpark equivalent — new staging logic)
 -- Handles: missing lat/lng columns, store type normalization, type casting
 
 with source as (
-    select * from read_csv(
-        '{{ var("data_path") }}/stores_500k.csv',
-        header = true,
-        auto_detect = true
-    )
+    select * from {{ read_source('raw', 'stores', 'stores_500k.csv') }}
 ),
 
 cleaned as (

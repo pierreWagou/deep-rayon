@@ -34,7 +34,7 @@ models:
         data_tests:
           - not_null
       - name: monetary_value
-        description: Total quantity purchased across all transactions
+        description: Total spend across all transactions
         data_tests:
           - not_null
       - name: recency_score
@@ -79,8 +79,14 @@ models:
         description: Whether the customer has more than one transaction
       - name: first_purchase_date
         description: Date of the client's first purchase
+        data_tests:
+          - valid_date_range:
+              min_date: '2020-01-01'
       - name: last_purchase_date
         description: Date of the client's most recent purchase
+        data_tests:
+          - valid_date_range:
+              min_date: '2020-01-01'
       - name: avg_quantity_per_transaction
         description: Average quantity per transaction
       - name: primary_store_id

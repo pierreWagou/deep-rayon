@@ -1,0 +1,10 @@
+procs:
+  docs:
+    shell: "uvx --with mkdocs-material mkdocs serve --dev-addr 127.0.0.1:8100"
+  dbt-docs:
+    shell: "uv run dbt docs generate --project-dir dbt_project --profiles-dir dbt_project && uv run dbt docs serve --project-dir dbt_project --profiles-dir dbt_project --port 8200 --no-browser"
+  airflow:
+    cmd: ["docker", "compose", "-f", "airflow/docker-compose.yml", "up", "--build"]
+
+keymap_procs:
+  <q>: {c: force-quit}

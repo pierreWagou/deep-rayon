@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: stg_clients
+  - name: clients_bronze
     description: >
       Cleaned client/customer master data. 1:1 with source CSV.
       Handles missing account_id, type casting, and null filtering.
@@ -20,7 +20,7 @@ models:
       - name: account_id
         description: Fidelity card number (nullable — may be missing in some file drops)
 
-  - name: stg_stores
+  - name: stores_bronze
     description: >
       Cleaned store master data with normalized types and parsed coordinates.
       Handles missing lat/lng columns, store type casing normalization.
@@ -57,7 +57,7 @@ models:
               config:
                 severity: warn
 
-  - name: stg_products
+  - name: products_bronze
     description: >
       Cleaned product catalog. Handles type casting and brand normalization.
     columns:
@@ -77,7 +77,7 @@ models:
       - name: description
         description: Product description text
 
-  - name: stg_transactions
+  - name: transactions_bronze
     description: >
       Cleaned transaction records with normalized dates and sign-corrected
       quantity/spend values. Handles date format variations and sign inconsistencies.
@@ -88,11 +88,11 @@ models:
           - unique
           - not_null
       - name: client_id
-        description: Foreign key to stg_clients.client_id
+        description: Foreign key to clients_bronze.client_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_clients')
+              to: ref('clients_bronze')
               field: client_id
               config:
                 severity: warn
@@ -100,6 +100,8 @@ models:
         description: Normalized transaction date (YYYY-MM-DD)
         data_tests:
           - not_null
+          - valid_date_range:
+              min_date: '2020-01-01'
       - name: hour
         description: Hour of the transaction (0-23)
         data_tests:
@@ -109,11 +111,11 @@ models:
         data_tests:
           - not_null
       - name: product_id
-        description: Foreign key to stg_products.product_id
+        description: Foreign key to products_bronze.product_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_products')
+              to: ref('products_bronze')
               field: product_id
               config:
                 severity: warn
@@ -121,16 +123,18 @@ models:
         description: Quantity purchased (positive) or returned (negative), sign-corrected
         data_tests:
           - not_null
+          - sign_consistency:
+              compare_column: spend
       - name: spend
         description: Total spend amount, sign-corrected to match quantity direction
         data_tests:
           - not_null
       - name: store_id
-        description: Foreign key to stg_stores.store_id
+        description: Foreign key to stores_bronze.store_id
         data_tests:
           - not_null
           - relationships:
-              to: ref('stg_stores')
+              to: ref('stores_bronze')
               field: store_id
               config:
                 severity: warn

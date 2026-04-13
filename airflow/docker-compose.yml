@@ -1,0 +1,40 @@
+# ── Local Airflow with Docker Compose ────────────────────────────────────────
+#
+# Single-container Airflow using `airflow standalone` (webserver + scheduler
+# + triggerer in one process, SQLite metadata database).
+#
+# Mock Databricks operators (plugins/mock_databricks.py) let the DAG load
+# and execute end-to-end without a real Databricks workspace.
+#
+# Usage:
+#   docker compose -f airflow/docker-compose.yml up --build
+#   open http://localhost:8080  (admin / admin)
+#
+# ─────────────────────────────────────────────────────────────────────────────
+
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__EXECUTOR=SequentialExecutor
+      - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=sqlite:////opt/airflow/airflow.db
+      - AIRFLOW__CORE__FERNET_KEY=
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION=False
+      - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
+      - AIRFLOW__WEBSERVER__SECRET_KEY=vusion-dev-key
+      - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
+      # Airflow variable used in the DAG (avoids "variable not found" errors)
+      - AIRFLOW_VAR_VUSION_DBT_JOB_ID=99999
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./plugins:/opt/airflow/plugins
+    command: >
+      bash -c "airflow db migrate
+      && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com
+      && echo admin > /opt/airflow/standalone_admin_password.txt
+      && airflow standalone"
