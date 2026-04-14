@@ -55,6 +55,7 @@ nav:
       - Airflow: airflow.md
       - Databricks: databricks.md
   - Benchmarks: benchmarks.md
+  - dbt Catalog: http://localhost:8200/
 
 # Markdown extensions for rich content
 markdown_extensions:

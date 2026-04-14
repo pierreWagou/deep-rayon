@@ -1,0 +1,240 @@
+# dbt unit tests for gold layer KPI models
+# These test aggregation logic, trend computation, and basket analysis
+# with fixed input data to verify correctness of transformations.
+
+unit_tests:
+
+  # ---------------------------------------------------------------------------
+  # basket_analysis_per_store
+  # ---------------------------------------------------------------------------
+
+  - name: test_basket_metrics_single_store
+    description: >
+      Two transactions at the same store: basket sizes 3 and 7.
+      avg=5, min=3, max=7, stddev=~2.83, total_transactions=2.
+    model: basket_analysis_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 2, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 20, transaction_date: "2026-04-02", hour: 14, minute: 0, product_id: 3, quantity: 7, spend: 70.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, avg_basket_size: 5.0, avg_basket_item_count: 1.5, min_basket_size: 3, max_basket_size: 7, total_transactions: 2, store_type: "hyper"}
+
+  - name: test_basket_metrics_multiple_stores
+    description: >
+      Two stores with different basket profiles. Validates that aggregation
+      is correctly partitioned by store_id.
+    model: basket_analysis_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          # Store 100: one basket of size 4 (2 products)
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 3, spend: 30.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 2, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          # Store 200: one basket of size 10 (1 product)
+          - {transaction_id: 2, client_id: 20, transaction_date: "2026-04-02", hour: 14, minute: 0, product_id: 3, quantity: 10, spend: 100.0, store_id: 200, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+          - {store_id: 200, latlng: "45.76,4.83", opening: "09:00", closing: "21:00", store_type: "express", latitude: 45.76, longitude: 4.83}
+    expect:
+      rows:
+        - {store_id: 100, avg_basket_size: 4.0, avg_basket_item_count: 2.0, total_transactions: 1, store_type: "hyper"}
+        - {store_id: 200, avg_basket_size: 10.0, avg_basket_item_count: 1.0, total_transactions: 1, store_type: "express"}
+
+  - name: test_basket_item_count_distinct_products
+    description: >
+      A single basket with duplicate product_id rows should count distinct
+      products, not total rows. 2 rows with the same product_id = 1 distinct product.
+    model: basket_analysis_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 3, spend: 30.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "super", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, avg_basket_size: 5.0, avg_basket_item_count: 1.0, total_transactions: 1}
+
+  # ---------------------------------------------------------------------------
+  # nb_clients_per_store
+  # ---------------------------------------------------------------------------
+
+  - name: test_nb_clients_single_store
+    description: >
+      Two distinct clients at one store, 3 total transactions.
+      nb_clients=2, total_transactions=3, avg_transactions_per_client=1.5.
+    model: nb_clients_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 5, spend: 50.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-02", hour: 11, minute: 0, product_id: 2, quantity: 3, spend: 30.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 3, client_id: 20, transaction_date: "2026-04-03", hour: 14, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, nb_clients: 2, total_transactions: 3, total_quantity: 10, avg_quantity: 3.33, avg_transactions_per_client: 1.5, store_type: "hyper"}
+
+  - name: test_nb_clients_multiple_stores
+    description: >
+      Two stores, validating that client counts are correctly partitioned.
+      Client 10 visits both stores but should be counted once per store.
+    model: nb_clients_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          # Store 100: client 10 only
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 5, spend: 50.0, store_id: 100, is_sign_corrected: false}
+          # Store 200: client 10 + client 20
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-02", hour: 11, minute: 0, product_id: 2, quantity: 3, spend: 30.0, store_id: 200, is_sign_corrected: false}
+          - {transaction_id: 3, client_id: 20, transaction_date: "2026-04-03", hour: 14, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 200, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+          - {store_id: 200, latlng: "45.76,4.83", opening: "09:00", closing: "21:00", store_type: "express", latitude: 45.76, longitude: 4.83}
+    expect:
+      rows:
+        - {store_id: 100, nb_clients: 1, total_transactions: 1, avg_transactions_per_client: 1.0}
+        - {store_id: 200, nb_clients: 2, total_transactions: 2, avg_transactions_per_client: 1.0}
+
+  - name: test_nb_clients_same_client_multiple_transactions
+    description: >
+      One client with 4 transactions at one store.
+      avg_transactions_per_client should be 4.0.
+    model: nb_clients_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-01", hour: 10, minute: 0, product_id: 1, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-02", hour: 11, minute: 0, product_id: 2, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 3, client_id: 10, transaction_date: "2026-04-03", hour: 12, minute: 0, product_id: 3, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 4, client_id: 10, transaction_date: "2026-04-04", hour: 13, minute: 0, product_id: 1, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "super", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, nb_clients: 1, total_transactions: 4, total_quantity: 4, avg_quantity: 1.0, avg_transactions_per_client: 4.0}
+
+  # ---------------------------------------------------------------------------
+  # product_trend_per_store
+  # ---------------------------------------------------------------------------
+
+  - name: test_trend_increasing
+    description: >
+      A store-product pair with more sales in the last 30 days (5 units)
+      than in the prior 30d window (2 units). Should be "Increasing".
+    model: product_trend_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          # Last 30 days: 5 units total
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-10", hour: 10, minute: 0, product_id: 1, quantity: 3, spend: 30.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-05", hour: 11, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 100, is_sign_corrected: false}
+          # 30-60 days ago: 2 units total
+          - {transaction_id: 3, client_id: 20, transaction_date: "2026-03-05", hour: 14, minute: 0, product_id: 1, quantity: 2, spend: 20.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('products')
+        rows:
+          - {product_id: 1, ean: "1234567890123", brand: "BrandA", description: "Product A"}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, product_id: 1, sales_30d: 5, trend_direction: "Increasing", brand: "BrandA", store_type: "hyper"}
+
+  - name: test_trend_decreasing
+    description: >
+      A store-product pair with fewer sales in the last 30 days (1 unit)
+      than in the prior 30d window (4 units). Should be "Decreasing".
+    model: product_trend_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          # Last 30 days: 1 unit
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-10", hour: 10, minute: 0, product_id: 1, quantity: 1, spend: 10.0, store_id: 100, is_sign_corrected: false}
+          # 30-60 days ago: 4 units
+          - {transaction_id: 2, client_id: 20, transaction_date: "2026-03-05", hour: 14, minute: 0, product_id: 1, quantity: 4, spend: 40.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('products')
+        rows:
+          - {product_id: 1, ean: "1234567890123", brand: "BrandA", description: "Product A"}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, product_id: 1, sales_30d: 1, trend_direction: "Decreasing", brand: "BrandA"}
+
+  - name: test_trend_stable_no_sales
+    description: >
+      A store-product pair with zero sales in both the last 30d and 30-60d
+      windows (all transactions older than 60d). Should be "Stable".
+    model: product_trend_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          # Only transactions older than 90 days
+          - {transaction_id: 1, client_id: 10, transaction_date: "2025-12-01", hour: 10, minute: 0, product_id: 1, quantity: 5, spend: 50.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('products')
+        rows:
+          - {product_id: 1, ean: "1234567890123", brand: "BrandA", description: "Product A"}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, product_id: 1, sales_30d: 0, sales_60d: 0, sales_90d: 0, trend_direction: "Stable"}
+
+  - name: test_trend_sales_velocity
+    description: >
+      Sales velocity = sales_30d / 30. With 15 units in last 30 days,
+      velocity should be 0.5 units/day.
+    model: product_trend_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-10", hour: 10, minute: 0, product_id: 1, quantity: 10, spend: 100.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-05", hour: 11, minute: 0, product_id: 1, quantity: 5, spend: 50.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('products')
+        rows:
+          - {product_id: 1, ean: "1234567890123", brand: "BrandA", description: "Product A"}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, product_id: 1, sales_30d: 15, sales_velocity_30d: 0.5}
+
+  - name: test_trend_multiple_products_per_store
+    description: >
+      Two products at the same store should produce separate rows,
+      each with their own metrics.
+    model: product_trend_per_store
+    given:
+      - input: ref('transactions')
+        rows:
+          - {transaction_id: 1, client_id: 10, transaction_date: "2026-04-10", hour: 10, minute: 0, product_id: 1, quantity: 3, spend: 30.0, store_id: 100, is_sign_corrected: false}
+          - {transaction_id: 2, client_id: 10, transaction_date: "2026-04-10", hour: 11, minute: 0, product_id: 2, quantity: 7, spend: 70.0, store_id: 100, is_sign_corrected: false}
+      - input: ref('products')
+        rows:
+          - {product_id: 1, ean: "1111111111111", brand: "BrandA", description: "Product A"}
+          - {product_id: 2, ean: "2222222222222", brand: "BrandB", description: "Product B"}
+      - input: ref('stores')
+        rows:
+          - {store_id: 100, latlng: "48.85,2.35", opening: "08:00", closing: "20:00", store_type: "hyper", latitude: 48.85, longitude: 2.35}
+    expect:
+      rows:
+        - {store_id: 100, product_id: 1, total_sales_all_time: 3, transaction_count: 1, brand: "BrandA"}
+        - {store_id: 100, product_id: 2, total_sales_all_time: 7, transaction_count: 1, brand: "BrandB"}

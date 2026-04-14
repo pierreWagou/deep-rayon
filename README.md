@@ -1,4 +1,4 @@
-# 🛒 Hyper-Rayon
+# 🛒 Deep-Rayon
 
 > Turning messy retail data into reliable store intelligence
 

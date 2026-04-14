@@ -75,7 +75,7 @@ mise run dev          # Start docs + dbt-docs + Airflow (mprocs)
 
 - **dbt-first** — all transformations are SQL models; PySpark is reference only
 - **Dual-target** — same SQL runs on DuckDB (dev) and Databricks (prod); Databricks-specific features wrapped in target-aware macros
-- **Data quality as code** — 55 data tests (45 schema, 7 generic, 3 singular), 3 unit tests
+- **Data quality as code** — 94 data tests (schema, generic, singular) + 14 unit tests across all layers
 - **Orchestration-only Airflow** — submits Databricks jobs, never runs dbt itself
 - **Databricks Asset Bundle** — declarative YAML with dev/prod targets, deployed via CI/CD
 

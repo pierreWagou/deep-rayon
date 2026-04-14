@@ -7,7 +7,9 @@
 # Databricks 2023.2+ (see: docs.databricks.com/en/jobs/dbt.html).
 #
 # dbt CLI runs on a single-node job cluster; queries execute on the SQL warehouse.
-# This job runs daily: dbt run → test → docs generate → optimize Delta tables.
+# This job runs daily: dbt run → test → docs generate.
+# Delta optimization (OPTIMIZE + Z-ORDER) is handled by a separate weekly job
+# (deep_rayon_optimize) to avoid unnecessary compaction overhead on every build.
 
 resources:
   jobs:
@@ -15,7 +17,7 @@ resources:
       name: deep_rayon_dbt_pipeline
       description: >
         Vusion dbt transformation pipeline: build models, test data quality,
-        generate documentation, and optimize Delta tables.
+        and generate documentation.
 
       tags:
         project: deep-rayon
@@ -103,21 +105,3 @@ resources:
           max_retries: 1
           min_retry_interval_millis: 30000
           retry_on_timeout: false
-
-        # 4. Optimize Delta tables (OPTIMIZE + Z-ORDER)
-        - task_key: optimize_tables
-          description: Run OPTIMIZE + Z-ORDER on Delta tables for query performance
-          depends_on:
-            - task_key: dbt_docs_generate
-          job_cluster_key: dbt_cli
-          dbt_task:
-            project_directory: ../dbt_project
-            commands:
-              - "dbt run-operation generate_optimization_statements"
-            warehouse_id: ${var.warehouse_id}
-          libraries:
-            - pypi:
-                package: "dbt-databricks>=1.9.0,<2.0.0"
-          max_retries: 1
-          min_retry_interval_millis: 60000
-          retry_on_timeout: true

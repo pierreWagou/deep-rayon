@@ -1,6 +1,16 @@
-# dbt Project
+# ![dbt](assets/dbt-logo.svg){: style="height: 1.2em; vertical-align: middle" } dbt Project
 
 dbt transformation layer for the Vusion retail data platform. Implements a medallion architecture (bronze / silver / gold) with full schema documentation, data quality tests, and unit tests. Runs on DuckDB locally and Databricks in production.
+
+!!! tip "Interactive dbt Catalog"
+
+    The auto-generated dbt catalog provides interactive schema exploration, column-level
+    lineage, and test coverage details. Run `mise run dev` or `mise run dbt:docs` and
+    open **[localhost:8200](http://localhost:8200/){:target="_blank"}**.
+
+    The catalog is generated from the same YAML schema files documented below --
+    this page covers architecture and design decisions, while the catalog is best
+    for browsing individual columns, tests, and dependencies.
 
 ## Dual-Target Architecture
 
@@ -59,25 +69,45 @@ Schema names match the medallion layer directly — no prefix. This is controlle
 
 ## Model Layers
 
+### Lineage
+
 ```mermaid
-flowchart TD
-    subgraph bronze_layer["Bronze"]
+flowchart LR
+    subgraph sources["Sources (CSV)"]
         direction TB
-        bc[clients<br/>view]
-        bs[stores<br/>view]
-        bp[products<br/>view]
-        bt[transactions<br/>view]
+        rc[clients_500k.csv]
+        rs[stores_500k.csv]
+        rp[products_500k.csv]
+        rt[transactions_500k.csv]
     end
 
-    subgraph silver["Silver"]
-        cs[customer<br/>table]
+    subgraph seeds["Seeds"]
+        bm[brand_mapping]
     end
 
-    subgraph gold["Gold"]
-        ba[basket_analysis_per_store<br/>table]
-        pt[product_trend_per_store<br/>table]
-        nc[nb_clients_per_store<br/>table]
+    subgraph bronze_layer["Bronze (views)"]
+        direction TB
+        bc[clients]
+        bs[stores]
+        bp[products]
+        bt[transactions]
     end
+
+    subgraph silver["Silver (tables)"]
+        cs[customer]
+    end
+
+    subgraph gold["Gold (tables)"]
+        ba[basket_analysis<br/>per_store]
+        pt[product_trend<br/>per_store]
+        nc[nb_clients<br/>per_store]
+    end
+
+    rc --> bc
+    rs --> bs
+    rp --> bp
+    rt --> bt
+    bm --> bp
 
     bc --> cs
     bs --> cs
@@ -193,6 +223,11 @@ The source data contains six known quality issues. All are handled in the bronze
 - `assert_sign_corrected_transactions_have_consistent_signs` -- post-correction, quantity and spend must agree
 - `assert_rfm_scores_within_bounds` -- all RFM scores between 1 and 5
 - `assert_store_loyalty_score_within_range` -- loyalty score between 0 and 100
+- `assert_basket_min_le_max` -- min basket size never exceeds max
+- `assert_sales_windows_monotonic` -- sales_30d <= sales_60d <= sales_90d <= total_sales_all_time
+- `assert_nb_clients_le_total_transactions` -- a store cannot have more unique clients than transactions
+- `assert_gold_stores_exist_in_bronze` -- no orphaned store_ids across gold models
+- `assert_avg_transactions_per_client_consistent` -- avg_transactions_per_client = total / nb_clients (within rounding)
 
 **Generic tests** (`tests/generic/`):
 
@@ -202,13 +237,53 @@ The source data contains six known quality issues. All are handled in the bronze
 
 ## Unit Tests
 
-dbt unit tests validate transformation logic with fixed input data. Defined in `models/silver/_silver_unit_tests.yml`:
+dbt unit tests validate transformation logic with fixed input data.
+
+### Silver (`_silver_unit_tests.yml`)
 
 | Test | What It Validates |
 |------|-------------------|
 | `test_rfm_segment_champion` | High-frequency, high-recency, high-monetary client is classified as Champion |
 | `test_customer_lifecycle_new` | Client with exactly one transaction is classified as New lifecycle stage |
 | `test_customer_status_churned` | Client with only old transactions (200+ days) is classified as Churned |
+
+### Gold (`_gold_unit_tests.yml`)
+
+| Test | Model | What It Validates |
+|------|-------|-------------------|
+| `test_basket_metrics_single_store` | `basket_analysis_per_store` | Avg, min, max, stddev, total for two baskets at one store |
+| `test_basket_metrics_multiple_stores` | `basket_analysis_per_store` | Aggregation is correctly partitioned by store_id |
+| `test_basket_item_count_distinct_products` | `basket_analysis_per_store` | Counts distinct products per basket, not rows |
+| `test_nb_clients_single_store` | `nb_clients_per_store` | Client counting, totals, avg_transactions_per_client |
+| `test_nb_clients_multiple_stores` | `nb_clients_per_store` | Same client counted once per store |
+| `test_nb_clients_same_client_multiple_transactions` | `nb_clients_per_store` | Repeat visits correctly inflate avg_transactions_per_client |
+| `test_trend_increasing` | `product_trend_per_store` | More recent sales than prior window = "Increasing" |
+| `test_trend_decreasing` | `product_trend_per_store` | Fewer recent sales than prior window = "Decreasing" |
+| `test_trend_stable_no_sales` | `product_trend_per_store` | No recent sales in any window = "Stable" |
+| `test_trend_sales_velocity` | `product_trend_per_store` | sales_30d / 30 = correct velocity |
+| `test_trend_multiple_products_per_store` | `product_trend_per_store` | Two products at same store produce separate rows |
+
+## Test Coverage Summary
+
+| Layer | Model | Schema | Singular | Unit | Total |
+|-------|-------|--------|----------|------|-------|
+| Bronze | `clients` | 2 | -- | -- | 2 |
+| Bronze | `stores` | 5 | -- | -- | 5 |
+| Bronze | `products` | 3 | -- | -- | 3 |
+| Bronze | `transactions` | 12 | 1 | -- | 13 |
+| Silver | `customer` | 14 | 2 | 3 | 19 |
+| Gold | `basket_analysis_per_store` | 13 | 1 | 3 | 17 |
+| Gold | `product_trend_per_store` | 18 | 1 | 5 | 24 |
+| Gold | `nb_clients_per_store` | 14 | 2 | 3 | 19 |
+| | | | | | |
+| **Total** | **8 models** | **81** | **8** (incl. 1 cross-model) | **14** | **103+** |
+
+!!! note "Test counts"
+
+    Schema test counts include `unique`, `not_null`, `relationships`, `accepted_values`,
+    and custom generic tests (`positive_value`, `valid_date_range`, `sign_consistency`).
+    The actual total is higher (117 items in `dbt build`) because some tests are shared
+    across models and the seed is counted separately.
 
 Run unit tests:
 
@@ -218,7 +293,7 @@ mise run dbt:test
 
 ## Table Optimization Policy
 
-Delta Lake optimization for Databricks production. Implemented as a dbt macro in `macros/optimize_tables.sql` (no-op on DuckDB).
+Delta Lake optimization for Databricks production. Implemented as a dbt macro in `macros/optimize_tables.sql` (no-op on DuckDB). Runs **weekly** (Sunday 05:00 Europe/Paris) via a standalone Databricks job (`deep_rayon_optimize`), decoupled from the daily dbt pipeline to avoid unnecessary compaction overhead.
 
 | Table | Z-ORDER Columns | Partitioning | Rationale |
 |-------|----------------|--------------|-----------|
@@ -228,11 +303,17 @@ Delta Lake optimization for Databricks production. Implemented as a dbt macro in
 | `nb_clients_per_store` | `store_id`, `store_type` | None | Small aggregate |
 | `transactions` (if materialized) | `transaction_date`, `client_id`, `store_id` | `PARTITION BY (transaction_date)` | Largest table; date partitioning for time-range queries |
 
+**Why weekly, not daily:**
+
+- OPTIMIZE compacts small files and applies Z-ORDER — an expensive operation on large tables
+- Running after every dbt build wastes compute without meaningful query performance improvement
+- Weekly is the standard cadence for Delta maintenance at scale (billions of rows)
+- The optimization job is independently schedulable — frequency can be adjusted without touching the dbt pipeline
+
 **Scaling considerations:**
 
 - At billions of rows, partition transactions by month (truncated date) to avoid over-partitioning
 - Evaluate liquid clustering as a Z-ORDER replacement for more adaptive data organization
-- Schedule OPTIMIZE weekly instead of per-run to avoid overhead
 - Run VACUUM after OPTIMIZE to reclaim storage from stale files
 
 ## How to Run Locally

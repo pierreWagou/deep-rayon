@@ -28,8 +28,10 @@ services:
       - AIRFLOW__WEBSERVER__EXPOSE_CONFIG=True
       - AIRFLOW__WEBSERVER__SECRET_KEY=deep-rayon-dev-key
       - AIRFLOW__API__AUTH_BACKENDS=airflow.api.auth.backend.basic_auth
-      # Airflow variable used in the DAG (avoids "variable not found" errors)
+      # Airflow variables used in DAGs (avoids "variable not found" errors)
       - AIRFLOW_VAR_VUSION_DBT_JOB_ID=99999
+      - AIRFLOW_VAR_DEEP_RAYON_OPTIMIZE_JOB_ID=99998
+      - AIRFLOW_VAR_DEEP_RAYON_BENCHMARK_JOB_ID=99997
     volumes:
       - ./dags:/opt/airflow/dags
       - ./plugins:/opt/airflow/plugins

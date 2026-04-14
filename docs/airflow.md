@@ -1,10 +1,14 @@
 # Airflow Orchestration
 
-Airflow DAG for orchestrating the Vusion dbt pipeline on Databricks. Follows the principle of **orchestration-only**: Airflow submits and monitors Databricks jobs but never runs dbt or data transformations directly.
+Airflow DAGs for orchestrating the Vusion data platform on Databricks. Follows the principle of **orchestration-only**: Airflow submits and monitors Databricks jobs but never runs dbt or data transformations directly.
 
-## DAG Overview
+Two DAGs with separate concerns:
 
-**DAG ID:** `deep_rayon_dbt_pipeline`
+- **`deep_rayon_dbt_pipeline`** -- Daily dbt transformations (run, test, docs)
+- **`deep_rayon_optimize`** -- Weekly Delta table maintenance (OPTIMIZE + Z-ORDER)
+- **`deep_rayon_benchmark`** -- Manual-trigger performance benchmarks
+
+## DAG: `deep_rayon_dbt_pipeline`
 
 | Property | Value |
 |----------|-------|
@@ -23,8 +27,7 @@ flowchart LR
         run[dbt_run] --> test[dbt_test] --> docs[dbt_docs_generate]
     end
 
-    dbt_transformations --> optimize[optimize_tables]
-    optimize --> notify[notify_success]
+    dbt_transformations --> notify[notify_success]
 ```
 
 ### Task Descriptions
@@ -34,16 +37,15 @@ flowchart LR
 | `dbt_run` | `DatabricksRunNowOperator` | Execute dbt models (bronze, silver, gold) |
 | `dbt_test` | `DatabricksRunNowOperator` | Run all dbt data quality tests |
 | `dbt_docs_generate` | `DatabricksRunNowOperator` | Generate dbt documentation catalog |
-| `optimize_tables` | `DatabricksRunNowOperator` | Run OPTIMIZE + Z-ORDER on Delta tables |
 | `notify_success` | `PythonOperator` | Send completion notification (placeholder for Slack/Teams) |
 
-The first three tasks are grouped in a `TaskGroup` named `dbt_transformations` for visual clarity in the Airflow UI. The optimize step runs after all dbt tasks complete, and the notification fires last.
+The first three tasks are grouped in a `TaskGroup` named `dbt_transformations` for visual clarity in the Airflow UI. The notification fires after all dbt tasks complete.
 
 ## Databricks Operators
 
 The DAG uses operators from `apache-airflow-providers-databricks`:
 
-- **`DatabricksRunNowOperator`** -- Triggers an existing Databricks job by ID and waits for completion. Each task passes different `notebook_params` to control which dbt command runs (`run`, `test`, `docs generate`, or `run-operation`).
+- **`DatabricksRunNowOperator`** -- Triggers an existing Databricks job by ID and waits for completion. Each task passes different `notebook_params` to control which dbt command runs (`run`, `test`, or `docs generate`).
 - **`DatabricksPartitionSensor`** -- Used in the mock plugin (`mock_databricks.py`) for local testing. Reserved for future use in the DAG (e.g., waiting for upstream data partitions before triggering the pipeline).
 
 ### Why `wait_for_termination` instead of separate sensors
@@ -82,7 +84,6 @@ The Databricks job ID is stored as an Airflow variable (`deep_rayon_dbt_job_id`)
 | Databricks job (dbt_run) | 2 | 60 seconds | 1 hour |
 | Databricks job (dbt_test) | 1 | 30 seconds | 30 minutes |
 | Databricks job (docs) | 1 | 30 seconds | 15 minutes |
-| Databricks job (optimize) | 1 | 60 seconds | 30 minutes |
 
 ### Failure Callbacks
 
@@ -93,11 +94,80 @@ The Databricks job ID is stored as an Airflow variable (`deep_rayon_dbt_job_id`)
 
 1. **Orchestration-only** -- Airflow manages job submission and monitoring. dbt and its Python dependencies live in the Databricks environment, not in Airflow. This avoids dependency conflicts and keeps the Airflow deployment lightweight.
 
-2. **Single Databricks job** -- All tasks reference the same `job_id` with different parameters. This maps to the multi-task Databricks job defined in `resources/deep_rayon_dbt_pipeline.yml`. Airflow controls the execution order; Databricks handles compute.
+2. **Single Databricks job** -- All tasks reference the same `job_id` with different parameters. This maps to the multi-task Databricks job defined in `resources/deep_rayon_dbt_pipeline.yml`. Airflow controls the execution order; Databricks handles compute. Delta optimization runs as a separate job/DAG (`deep_rayon_optimize`) on a weekly schedule.
 
 3. **No catchup** -- The pipeline processes a full snapshot (not incremental), so historical runs would duplicate work without benefit.
 
 4. **XCom push** -- `dbt_run` and `dbt_test` push results to XCom for downstream tasks or monitoring integrations to inspect run metadata.
+
+## DAG: `deep_rayon_optimize`
+
+Weekly Delta table maintenance, decoupled from the daily dbt pipeline.
+
+| Property | Value |
+|----------|-------|
+| Schedule | Weekly on Sunday at 05:00 Europe/Paris |
+| Max concurrent runs | 1 |
+| Catchup | Disabled |
+| Default retries | 2 (5-minute delay) |
+| Execution timeout | 1 hour |
+| Failure notification | `data-engineering@vusion.com` |
+
+### Task Flow
+
+```mermaid
+flowchart LR
+    optimize[optimize_tables] --> notify[notify_success]
+```
+
+| Task | Operator | What It Does |
+|------|----------|--------------|
+| `optimize_tables` | `DatabricksRunNowOperator` | Run OPTIMIZE + Z-ORDER on silver and gold Delta tables |
+| `notify_success` | `PythonOperator` | Send completion notification |
+
+### Why a separate DAG?
+
+- **OPTIMIZE is expensive** -- compaction and Z-ORDER rewriting on large Delta tables consumes significant compute
+- **Weekly is sufficient** -- at the current data volume (500K rows), query performance does not degrade within a week of writes
+- **Independent scheduling** -- frequency can be adjusted (daily during high-ingestion periods, monthly during low-activity) without touching the dbt pipeline
+- **Cleaner failure isolation** -- an optimization failure does not block or delay the daily dbt pipeline
+
+The job ID is stored in a separate Airflow variable (`deep_rayon_optimize_job_id`) to allow independent deployment and configuration.
+
+## DAG: `deep_rayon_benchmark`
+
+Manual-trigger DAG for running performance benchmark queries against dbt-built tables.
+
+| Property | Value |
+|----------|-------|
+| Schedule | None (manual trigger only) |
+| Max concurrent runs | 1 |
+| Catchup | Disabled |
+| Default retries | 0 |
+| Execution timeout | 1 hour |
+| Failure notification | `data-engineering@vusion.com` |
+
+### Task Flow
+
+```mermaid
+flowchart LR
+    bench[run_benchmarks] --> notify[notify_success]
+```
+
+| Task | Operator | What It Does |
+|------|----------|--------------|
+| `run_benchmarks` | `DatabricksRunNowOperator` | Submit the benchmark Databricks job (Python wheel with 4 JOIN-heavy queries) |
+| `notify_success` | `PythonOperator` | Send completion notification |
+
+### Usage
+
+Trigger from the Airflow UI ("Trigger DAG" button) or CLI:
+
+```bash
+airflow dags trigger deep_rayon_benchmark
+```
+
+Typically run after the dbt pipeline completes to measure query performance on freshly built tables. Results (duration, files scanned, estimated cost) are pushed to XCom and logged.
 
 ## Local Development (Docker Compose)
 
@@ -151,7 +221,9 @@ mise run airflow:down
 ```
 airflow/
 ├── dags/
-│   └── deep_rayon_dbt_pipeline.py    # Production DAG (unchanged)
+│   ├── deep_rayon_dbt_pipeline.py    # Daily dbt pipeline DAG
+│   ├── deep_rayon_optimize.py        # Weekly Delta optimization DAG
+│   └── deep_rayon_benchmark.py       # Manual benchmark DAG
 ├── plugins/
 │   └── mock_databricks.py        # Mock Databricks operators for local dev
 ├── docker-compose.yml             # Single-container Airflow (standalone)

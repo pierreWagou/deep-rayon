@@ -1,0 +1,64 @@
+# Vusion Delta Optimization — Job Definition
+#
+# Standalone job for Delta table maintenance (OPTIMIZE + Z-ORDER).
+# Decoupled from the daily dbt pipeline to run on a weekly cadence.
+#
+# Rationale:
+#   - OPTIMIZE compacts small files and applies Z-ORDER for query performance
+#   - Running weekly avoids unnecessary compaction overhead on every dbt build
+#   - At scale (billions of rows), weekly is the recommended cadence
+#   - Separates transformation concerns (dbt) from storage maintenance (Delta)
+#
+# Trigger manually after initial deployment:
+#   databricks bundle run deep_rayon_optimize
+
+resources:
+  jobs:
+    deep_rayon_optimize:
+      name: deep_rayon_optimize
+      description: >
+        Weekly Delta table optimization: OPTIMIZE + Z-ORDER on silver and gold
+        tables for query performance. Runs independently of the dbt pipeline.
+
+      tags:
+        project: deep-rayon
+        team: data-engineering
+
+      schedule:
+        quartz_cron_expression: "0 0 5 ? * SUN"
+        timezone_id: Europe/Paris
+        pause_status: UNPAUSED
+
+      max_concurrent_runs: 1
+
+      email_notifications:
+        on_failure:
+          - ${var.notification_email}
+
+      job_clusters:
+        - job_cluster_key: dbt_cli
+          new_cluster:
+            spark_version: "16.4.x-scala2.12"
+            node_type_id: Standard_DS3_v2
+            num_workers: 0
+            spark_conf:
+              spark.master: "local[*, 4]"
+              spark.databricks.cluster.profile: singleNode
+            custom_tags:
+              ResourceClass: SingleNode
+
+      tasks:
+        - task_key: optimize_tables
+          description: Run OPTIMIZE + Z-ORDER on silver and gold Delta tables
+          job_cluster_key: dbt_cli
+          dbt_task:
+            project_directory: ../dbt_project
+            commands:
+              - "dbt run-operation generate_optimization_statements"
+            warehouse_id: ${var.warehouse_id}
+          libraries:
+            - pypi:
+                package: "dbt-databricks>=1.9.0,<2.0.0"
+          max_retries: 2
+          min_retry_interval_millis: 60000
+          retry_on_timeout: true

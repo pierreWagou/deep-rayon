@@ -6,7 +6,9 @@ error handling, and monitoring.
 Architecture:
   - Airflow is orchestration-only (no dbt/data dependencies)
   - Each task submits a Databricks job and waits for completion
-  - Task flow: dbt_run → dbt_test → dbt_docs_generate → optimize_tables → notify
+  - Task flow: dbt_run → dbt_test → dbt_docs_generate → notify
+  - Delta optimization (OPTIMIZE + Z-ORDER) runs separately on a weekly schedule
+    via the deep_rayon_optimize DAG
 
 Production: Uses DatabricksRunNowOperator to submit jobs on Databricks.
 Local dev: Can be tested with `airflow dags test deep_rayon_dbt_pipeline`.
@@ -58,7 +60,7 @@ def on_failure_callback(context):
 
 with DAG(
     dag_id="deep_rayon_dbt_pipeline",
-    description="Orchestrate dbt transformations on Databricks: run → test → docs → optimize",
+    description="Orchestrate dbt transformations on Databricks: run → test → docs",
     schedule="0 3 * * *",  # Daily at 3 AM Paris time
     start_date=pendulum.datetime(2024, 1, 1, tz="Europe/Paris"),
     catchup=False,
@@ -111,20 +113,6 @@ with DAG(
 
         dbt_run >> dbt_test >> dbt_docs
 
-    # ── Task: optimize Delta tables ─────────────────────────────────────────
-
-    optimize_tables = DatabricksRunNowOperator(
-        task_id="optimize_tables",
-        databricks_conn_id=DATABRICKS_CONN_ID,
-        job_id=DBT_JOB_ID,
-        notebook_params={
-            "dbt_command": "run-operation generate_optimization_statements",
-            "target": "prod",
-        },
-        wait_for_termination=True,
-        polling_period_seconds=30,
-    )
-
     # ── Task: send completion notification ──────────────────────────────────
 
     notify_success = PythonOperator(
@@ -135,4 +123,4 @@ with DAG(
 
     # ── Task dependencies ───────────────────────────────────────────────────
 
-    dbt_group >> optimize_tables >> notify_success
+    dbt_group >> notify_success

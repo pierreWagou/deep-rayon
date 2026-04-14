@@ -9,16 +9,17 @@ deep-rayon/
 ├── databricks.yml                          # Bundle config (targets, variables)
 └── resources/
     ├── deep_rayon_dbt_pipeline.yml             # dbt pipeline job (daily)
+    ├── deep_rayon_optimize.yml                 # Delta optimization job (weekly)
     └── deep_rayon_benchmark.yml                # Benchmark job (manual trigger)
 ```
 
 ## Jobs
 
-### `deep_rayon_dbt_pipeline` — Daily dbt Pipeline
+### `deep_rayon_dbt_pipeline` -- Daily dbt Pipeline
 
 ```mermaid
 flowchart LR
-    run[dbt_run] --> test[dbt_test] --> docs[dbt_docs_generate] --> optimize[optimize_tables]
+    run[dbt_run] --> test[dbt_test] --> docs[dbt_docs_generate]
 ```
 
 | Task | Type | Retries |
@@ -26,11 +27,25 @@ flowchart LR
 | `dbt_run` | `dbt_task` | 2 |
 | `dbt_test` | `dbt_task` | 1 |
 | `dbt_docs_generate` | `dbt_task` | 1 |
-| `optimize_tables` | `dbt_task` | 1 |
 
-All tasks use the `dbt_task` type (Databricks-native dbt CLI support). The dbt CLI process runs on a **single-node job cluster** (`dbt_cli`); the actual SQL queries execute on the **SQL warehouse** referenced by `warehouse_id`. The `optimize_tables` task runs `dbt run-operation generate_optimization_statements` to apply OPTIMIZE + Z-ORDER via the dbt macro.
+All tasks use the `dbt_task` type (Databricks-native dbt CLI support). The dbt CLI process runs on a **single-node job cluster** (`dbt_cli`); the actual SQL queries execute on the **SQL warehouse** referenced by `warehouse_id`.
 
 Schedule: daily at 03:00 Europe/Paris, max 1 concurrent run.
+
+### `deep_rayon_optimize` -- Weekly Delta Optimization
+
+```mermaid
+flowchart LR
+    optimize[optimize_tables]
+```
+
+| Task | Type | Retries |
+|------|------|---------|
+| `optimize_tables` | `dbt_task` | 2 |
+
+Runs `dbt run-operation generate_optimization_statements` to apply OPTIMIZE + Z-ORDER on silver and gold Delta tables. Decoupled from the daily pipeline to avoid unnecessary compaction overhead on every dbt build.
+
+Schedule: weekly on Sunday at 05:00 Europe/Paris, max 1 concurrent run.
 
 ### `deep_rayon_benchmark` — Performance Benchmarks
 
