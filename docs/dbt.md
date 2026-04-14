@@ -1,4 +1,4 @@
-# ![dbt](assets/dbt-logo.svg){: style="height: 1.2em; vertical-align: middle" } dbt Project
+# dbt Project
 
 dbt transformation layer for the Vusion retail data platform. Implements a medallion architecture (bronze / silver / gold) with full schema documentation, data quality tests, and unit tests. Runs on DuckDB locally and Databricks in production.
 

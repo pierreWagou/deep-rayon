@@ -2,13 +2,13 @@
 
 > Turning messy retail data into reliable store intelligence
 
-[![CI](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/ci.yml)
-[![CD](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml/badge.svg)](https://github.com/pierreWagou/vusion/actions/workflows/cd.yml)
-[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg?logo=python&logoColor=white)](https://www.python.org/downloads/release/python-3120/)
-[![dbt](https://img.shields.io/badge/dbt-1.11-FF694B.svg?logo=dbt)](https://docs.getdbt.com/)
-[![DuckDB](https://img.shields.io/badge/DuckDB-local%20dev-FEF000.svg?logo=duckdb)](https://duckdb.org/)
-[![Databricks](https://img.shields.io/badge/Databricks-production-FF3621.svg?logo=databricks)](https://www.databricks.com/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[![CI][ci-badge]][ci-url]
+[![CD][cd-badge]][cd-url]
+[![Python 3.12][python-badge]][python-url]
+[![dbt][dbt-badge]][dbt-url]
+[![DuckDB][duckdb-badge]][duckdb-url]
+[![Databricks][databricks-badge]][databricks-url]
+[![License: MIT][license-badge]][license-url]
 
 Production-grade retail data pipeline — take-home test for [Vusion](https://www.vusion.com/). Migrates a PySpark ETL to **dbt + Databricks** with a medallion architecture (Bronze / Silver / Gold).
 
@@ -47,7 +47,7 @@ CSV sources  →  Bronze (views)  →  Silver (tables)  →  Gold (tables)
 
 - **dbt-first** — all transformations are SQL models; PySpark is reference only
 - **Dual-target** — same SQL runs on DuckDB (dev) and Databricks (prod); Databricks-specific features wrapped in target-aware macros
-- **Data quality as code** — 55 data tests (45 schema, 7 generic, 3 singular), 3 unit tests. Six known data issues handled in the bronze layer.
+- **Data quality as code** — 94 data tests + 14 unit tests across all layers. Six known data issues handled in the bronze layer.
 - **Orchestration-only Airflow** — submits Databricks jobs, never runs dbt itself. Local dev uses mock operators via Docker Compose.
 - **Databricks Asset Bundle** — declarative YAML with dev/prod targets, deployed via CI/CD
 - **Bug fix** — corrected a join error in the original PySpark (`store_id == product_id` → `store_id == stores.id`)
@@ -78,7 +78,7 @@ Six issues handled in the bronze layer: missing columns, inconsistent casing, mu
 
 - **Single-node ephemeral cluster** for dbt CLI (no shuffle overhead for SQL pushdown)
 - **SQL Warehouse** for actual query execution (auto-scaling, Photon engine)
-- **OPTIMIZE after each build** — compacts small files from Delta write operations
+- **OPTIMIZE weekly** — compacts small files from Delta write operations on a separate schedule
 
 ### Impact
 
@@ -161,3 +161,19 @@ Full documentation is available at the [MkDocs site](https://pierreWagou.github.
 - **Airflow** — DAG design, retry policy, local development with mock operators
 - **Databricks** — asset bundle, targets, CI/CD deployment
 - **Benchmarks** — 4 JOIN-heavy queries with performance baselines
+
+<!-- Badge references -->
+[ci-badge]: https://github.com/pierreWagou/vusion/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/pierreWagou/vusion/actions/workflows/ci.yml
+[cd-badge]: https://github.com/pierreWagou/vusion/actions/workflows/cd.yml/badge.svg
+[cd-url]: https://github.com/pierreWagou/vusion/actions/workflows/cd.yml
+[python-badge]: https://img.shields.io/badge/python-3.12-blue.svg?logo=python&logoColor=white
+[python-url]: https://www.python.org/downloads/release/python-3120/
+[dbt-badge]: https://img.shields.io/badge/dbt-1.11-FF694B.svg
+[dbt-url]: https://docs.getdbt.com/
+[duckdb-badge]: https://img.shields.io/badge/DuckDB-local%20dev-FEF000.svg?logo=duckdb
+[duckdb-url]: https://duckdb.org/
+[databricks-badge]: https://img.shields.io/badge/Databricks-production-FF3621.svg?logo=databricks
+[databricks-url]: https://www.databricks.com/
+[license-badge]: https://img.shields.io/badge/license-MIT-green.svg
+[license-url]: LICENSE
