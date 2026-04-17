@@ -215,34 +215,35 @@
   <!-- ================================================================ -->
   <!-- TITLE + SUBTITLE — centered, floating in the aisle                -->
   <!-- ================================================================ -->
-  <text x="400" y="100" text-anchor="middle" font-family="sans-serif" font-size="42" font-weight="700" fill="#ffffff" filter="url(#textGlow)">
+  <text x="400" y="97" text-anchor="middle" font-family="sans-serif" font-size="42" font-weight="700" fill="#ffffff" filter="url(#textGlow)">
     Deep-Rayon
   </text>
-  <text x="400" y="120" text-anchor="middle" font-family="sans-serif" font-size="12" letter-spacing="3" fill="#e0b0ff" opacity="0.85">
+  <text x="400" y="124" text-anchor="middle" font-family="sans-serif" font-size="12" letter-spacing="3" fill="#e0b0ff" opacity="0.85">
     FROM AISLES TO INSIGHTS
   </text>
 
   <!-- ================================================================ -->
-  <!-- MEDALLION ARCHITECTURE — Bronze > Silver > Gold on the aisle floor -->
+  <!-- MEDALLION ARCHITECTURE — Bronze > Silver > Gold, centered         -->
+  <!-- Total width: 50+2+10+4+2+46+2+10+4+2+40 = 172, centered at 400  -->
   <!-- ================================================================ -->
 
   <!-- Bronze -->
-  <rect x="340" y="140" width="50" height="16" rx="3" fill="none" stroke="#cd7f32" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
-  <text x="365" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#cd7f32" opacity="0.9">BRONZE</text>
+  <rect x="314" y="140" width="50" height="16" rx="3" fill="none" stroke="#cd7f32" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
+  <text x="339" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#cd7f32" opacity="0.9">BRONZE</text>
 
   <!-- Arrow Bronze > Silver -->
-  <line x1="392" y1="148" x2="402" y2="148" stroke="#e0b0ff" stroke-width="0.8" opacity="0.5" />
-  <polygon points="402,146 406,148 402,150" fill="#e0b0ff" opacity="0.5" />
+  <line x1="366" y1="148" x2="376" y2="148" stroke="#e0b0ff" stroke-width="0.8" opacity="0.5" />
+  <polygon points="376,146 380,148 376,150" fill="#e0b0ff" opacity="0.5" />
 
   <!-- Silver -->
-  <rect x="408" y="140" width="46" height="16" rx="3" fill="none" stroke="#c0c0c0" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
-  <text x="431" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#c0c0c0" opacity="0.9">SILVER</text>
+  <rect x="382" y="140" width="46" height="16" rx="3" fill="none" stroke="#c0c0c0" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
+  <text x="405" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#c0c0c0" opacity="0.9">SILVER</text>
 
   <!-- Arrow Silver > Gold -->
-  <line x1="456" y1="148" x2="466" y2="148" stroke="#e0b0ff" stroke-width="0.8" opacity="0.5" />
-  <polygon points="466,146 470,148 466,150" fill="#e0b0ff" opacity="0.5" />
+  <line x1="430" y1="148" x2="440" y2="148" stroke="#e0b0ff" stroke-width="0.8" opacity="0.5" />
+  <polygon points="440,146 444,148 440,150" fill="#e0b0ff" opacity="0.5" />
 
   <!-- Gold -->
-  <rect x="472" y="140" width="40" height="16" rx="3" fill="none" stroke="#f9a825" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
-  <text x="492" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#f9a825" opacity="0.9">GOLD</text>
+  <rect x="446" y="140" width="40" height="16" rx="3" fill="none" stroke="#f9a825" stroke-width="1.2" opacity="0.7" filter="url(#glow)" />
+  <text x="466" y="151" text-anchor="middle" font-family="monospace" font-size="8" fill="#f9a825" opacity="0.9">GOLD</text>
 </svg>
